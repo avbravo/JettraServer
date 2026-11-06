@@ -1,21 +1,36 @@
 package io.jettra.server.example.flux;
 
 import io.jettra.flux.core.FluxView;
+import io.jettra.flux.core.Modifier;
 import io.jettra.flux.core.Widget;
-import io.jettra.flux.theme.ThemeData;
+import io.jettra.flux.theme.Themes;
+import io.jettra.flux.widgets.Badge;
 import io.jettra.flux.widgets.Button;
+import io.jettra.flux.widgets.Card;
+import io.jettra.flux.widgets.Column;
+import io.jettra.flux.widgets.Datatable;
 import io.jettra.flux.widgets.Div;
+import io.jettra.flux.widgets.Form;
+import io.jettra.flux.widgets.Header;
+import io.jettra.flux.widgets.InputHidden;
+import io.jettra.flux.widgets.Label;
+import io.jettra.flux.widgets.Link;
+import io.jettra.flux.widgets.Paragraph;
+import io.jettra.flux.widgets.Row;
 import io.jettra.flux.widgets.Text;
+import io.jettra.flux.widgets.TextInput;
 import io.jettra.server.example.model.Product;
 import io.jettra.server.example.service.ProductService;
 import io.jettra.server.example.util.Messages;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Vista de Catálogo Reactivo construida íntegramente en Java puro con JettraFlux.
- * Ofrece la misma funcionalidad transaccional y visual que productos.xhtml pero bajo el
- * paradigma reactivo declarativo de JettraFlux, utilizando etiquetas de messages.properties.
+ * Vista de Catálogo Reactivo construida íntegramente en Java puro con componentes JettraFlux.
+ * Ofrece la misma funcionalidad transaccional y visual que productos.xhtml bajo el
+ * paradigma reactivo declarativo de JettraFlux, utilizando componentes oficiales y
+ * etiquetas de messages.properties, sin usar StringBuilder ni concatenaciones manuales de HTML.
  */
 public class CatalogoFlux extends FluxView {
 
@@ -37,168 +52,180 @@ public class CatalogoFlux extends FluxView {
 
     @Override
     public Widget build() {
-        List<Widget> children = new ArrayList<>();
-
-        // 1. Título y subtítulo
-        children.add(Div.of(
-            Text.of(Messages.get("catalogo.flux.title")),
-            Text.of(" - " + Messages.get("catalogo.flux.subtitle"))
-        ));
-
-        // 2. Resumen KPI
-        int totalItems = products.size();
-        int totalStock = products.stream().mapToInt(Product::getStock).sum();
-        double totalValue = products.stream().mapToDouble(p -> p.getPrice() * p.getStock()).sum();
-
-        children.add(Div.of(
-            Text.of(Messages.get("catalogo.flux.summary.total") + " " + totalItems),
-            Text.of(" | " + Messages.get("catalogo.flux.summary.stock") + " " + totalStock),
-            Text.of(" | " + Messages.get("catalogo.flux.summary.value") + " $" + String.format("%.2f", totalValue))
-        ));
-
-        // 3. Botones de acción declarativos
-        children.add(Div.of(
-            Button.of(Messages.get("catalogo.flux.btn.save")),
-            Button.of(Messages.get("catalogo.flux.btn.refresh"))
-        ));
-
-        return Div.of(children.toArray(new Widget[0]));
-    }
-
-    /**
-     * Renderizado HTML nativo y responsivo de alta fidelidad para la sección central del Dashboard.
-     */
-    public void renderSectionHtml(java.io.PrintWriter out) {
-        if (out != null) {
-            out.println(renderSectionHtml());
-        }
-    }
-
-    public String renderSectionHtml() {
         List<Product> currentProducts = productService != null ? productService.listAll() : this.products;
         int totalItems = currentProducts.size();
         int totalStock = currentProducts.stream().mapToInt(Product::getStock).sum();
         double totalValue = currentProducts.stream().mapToDouble(p -> p.getPrice() * p.getStock()).sum();
 
-        StringBuilder sb = new StringBuilder();
+        // 1. Cabecera: Badge, Título, Subtítulo y Badge de Tecnología Reactiva
+        Widget titleBadge = Badge.of(Messages.get("catalogo.flux.badge")).severity("primary")
+                .modifier(new Modifier().style("margin-right: 0.5rem; font-weight: 700;"));
+        Widget titleHeader = Header.of(2, Messages.get("catalogo.flux.title"))
+                .modifier(new Modifier().style("margin: 0; font-size: 1.35rem; font-weight: 700;"));
+        Widget subtitle = Paragraph.of(Messages.get("catalogo.flux.subtitle"))
+                .modifier(new Modifier().style("margin: 0.35rem 0 0 0; font-size: 0.85rem; color: var(--text-muted);"));
+        Widget techBadge = Badge.active("Java 25 Reactive DSL")
+                .modifier(new Modifier().style("font-weight: 700; padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.8rem;"));
 
-        // Cabecera del Catálogo Flux
-        sb.append("        <div style=\"display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-subtle); padding-bottom: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 0.5rem;\">\n");
-        sb.append("          <div>\n");
-        sb.append("            <div style=\"display: flex; align-items: center; gap: 0.5rem;\">\n");
-        sb.append("              <span style=\"background: var(--primary); color: white; padding: 0.2rem 0.55rem; border-radius: 6px; font-size: 0.75rem; font-weight: 700;\">")
-          .append(escapeHtml(Messages.get("catalogo.flux.badge"))).append("</span>\n");
-        sb.append("              <h2 style=\"margin: 0; font-size: 1.35rem; color: var(--text-main); font-weight: 700;\">")
-          .append(escapeHtml(Messages.get("catalogo.flux.title"))).append("</h2>\n");
-        sb.append("            </div>\n");
-        sb.append("            <p style=\"margin: 0.35rem 0 0 0; font-size: 0.85rem; color: var(--text-muted);\">")
-          .append(escapeHtml(Messages.get("catalogo.flux.subtitle"))).append("</p>\n");
-        sb.append("          </div>\n");
-        sb.append("          <span style=\"background: var(--primary-light); color: var(--primary); font-weight: 700; padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.8rem;\">Java 25 Reactive DSL</span>\n");
-        sb.append("        </div>\n");
+        Widget headerLeft = Column.of(
+                Row.of(titleBadge, titleHeader).modifier(new Modifier().style("display: flex; align-items: center; gap: 0.5rem;")),
+                subtitle
+        );
 
-        // Tarjetas KPI de Resumen del Inventario
-        sb.append("        <div class=\"kpi-grid\" style=\"margin-bottom: 1.5rem;\">\n");
-        sb.append("          <div class=\"ui-card\" style=\"background: var(--bg-subtle); padding: 1.2rem; border-radius: 10px; border: 1px solid var(--border-subtle);\">\n");
-        sb.append("            <div class=\"kpi-title\">").append(escapeHtml(Messages.get("catalogo.flux.summary.total"))).append("</div>\n");
-        sb.append("            <div class=\"kpi-value\" style=\"color: var(--primary);\">").append(totalItems).append("</div>\n");
-        sb.append("            <div class=\"kpi-sub\">").append(escapeHtml(Messages.get("product.units"))).append(" registradas en JPA</div>\n");
-        sb.append("          </div>\n");
+        Widget headerSection = Row.of(headerLeft, techBadge)
+                .modifier(new Modifier().style("display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-subtle); padding-bottom: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 0.5rem; width: 100%;"));
 
-        sb.append("          <div class=\"ui-card\" style=\"background: var(--bg-subtle); padding: 1.2rem; border-radius: 10px; border: 1px solid var(--border-subtle);\">\n");
-        sb.append("            <div class=\"kpi-title\">").append(escapeHtml(Messages.get("catalogo.flux.summary.stock"))).append("</div>\n");
-        sb.append("            <div class=\"kpi-value\" style=\"color: var(--success);\">").append(totalStock).append("</div>\n");
-        sb.append("            <div class=\"kpi-sub\">Unidades físicas en almacén</div>\n");
-        sb.append("          </div>\n");
+        // 2. Tarjetas KPI de Resumen del Inventario
+        Widget cardTotal = Card.of(
+                Column.of(
+                        Text.of(Messages.get("catalogo.flux.summary.total")).modifier(new Modifier().cssClass("kpi-title")),
+                        Text.of(String.valueOf(totalItems)).modifier(new Modifier().cssClass("kpi-value").style("color: var(--primary); font-size: 1.5rem; font-weight: 800; margin: 0.4rem 0;")),
+                        Text.of(Messages.get("product.units") + " registradas en JPA").modifier(new Modifier().cssClass("kpi-sub"))
+                )
+        ).modifier(new Modifier().cssClass("ui-card kpi-card").style("background: var(--bg-subtle); padding: 1.2rem; border-radius: 10px; border: 1px solid var(--border-subtle);"));
 
-        sb.append("          <div class=\"ui-card\" style=\"background: var(--bg-subtle); padding: 1.2rem; border-radius: 10px; border: 1px solid var(--border-subtle);\">\n");
-        sb.append("            <div class=\"kpi-title\">").append(escapeHtml(Messages.get("catalogo.flux.summary.value"))).append("</div>\n");
-        sb.append("            <div class=\"kpi-value\" style=\"color: var(--warning);\">$").append(String.format("%.2f", totalValue)).append("</div>\n");
-        sb.append("            <div class=\"kpi-sub\">Valoración en tiempo real</div>\n");
-        sb.append("          </div>\n");
-        sb.append("        </div>\n");
+        Widget cardStock = Card.of(
+                Column.of(
+                        Text.of(Messages.get("catalogo.flux.summary.stock")).modifier(new Modifier().cssClass("kpi-title")),
+                        Text.of(String.valueOf(totalStock)).modifier(new Modifier().cssClass("kpi-value").style("color: var(--success); font-size: 1.5rem; font-weight: 800; margin: 0.4rem 0;")),
+                        Text.of("Unidades físicas en almacén").modifier(new Modifier().cssClass("kpi-sub"))
+                )
+        ).modifier(new Modifier().cssClass("ui-card kpi-card").style("background: var(--bg-subtle); padding: 1.2rem; border-radius: 10px; border: 1px solid var(--border-subtle);"));
 
-        // Formulario Reactivo JettraFlux para Añadir Productos
-        sb.append("        <div class=\"ui-panel\" style=\"background: var(--bg-subtle); padding: 1.25rem; border-radius: 10px; border: 1px solid var(--border-subtle); margin-bottom: 1.5rem;\">\n");
-        sb.append("          <div style=\"font-size: 0.9rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.75rem;\">")
-          .append(escapeHtml(Messages.get("catalogo.flux.form.title"))).append("</div>\n");
-        sb.append("          <form method=\"post\" action=\"/productos.xhtml\" class=\"responsive-form\">\n");
-        sb.append("            <input type=\"hidden\" name=\"action\" value=\"save\" />\n");
-        sb.append("            <input type=\"hidden\" name=\"returnTo\" value=\"/dashboard.xhtml?view=catalogo-flux\" />\n");
-        sb.append("            <div style=\"flex: 1; min-width: 110px;\"><label style=\"display:block; font-size:0.75rem; color:var(--text-muted); font-weight:600; margin-bottom:0.25rem;\">")
-          .append(escapeHtml(Messages.get("product.code"))).append("</label><input type=\"text\" name=\"id\" required class=\"app-input\" placeholder=\"PRD-10\" /></div>\n");
-        sb.append("            <div style=\"flex: 2; min-width: 180px;\"><label style=\"display:block; font-size:0.75rem; color:var(--text-muted); font-weight:600; margin-bottom:0.25rem;\">")
-          .append(escapeHtml(Messages.get("product.name"))).append("</label><input type=\"text\" name=\"name\" required class=\"app-input\" placeholder=\"Servidor Cloud Jettra\" /></div>\n");
-        sb.append("            <div style=\"flex: 1.5; min-width: 130px;\"><label style=\"display:block; font-size:0.75rem; color:var(--text-muted); font-weight:600; margin-bottom:0.25rem;\">")
-          .append(escapeHtml(Messages.get("product.category"))).append("</label><input type=\"text\" name=\"category\" value=\"Hardware\" class=\"app-input\" /></div>\n");
-        sb.append("            <div style=\"flex: 1; min-width: 100px;\"><label style=\"display:block; font-size:0.75rem; color:var(--text-muted); font-weight:600; margin-bottom:0.25rem;\">")
-          .append(escapeHtml(Messages.get("product.price"))).append("</label><input type=\"number\" step=\"0.01\" name=\"price\" value=\"1250.00\" class=\"app-input\" /></div>\n");
-        sb.append("            <div style=\"flex: 1; min-width: 80px;\"><label style=\"display:block; font-size:0.75rem; color:var(--text-muted); font-weight:600; margin-bottom:0.25rem;\">")
-          .append(escapeHtml(Messages.get("product.stock"))).append("</label><input type=\"number\" name=\"stock\" value=\"10\" class=\"app-input\" /></div>\n");
-        sb.append("            <div style=\"align-self: flex-end;\"><button type=\"submit\" class=\"app-btn-primary\">")
-          .append(escapeHtml(Messages.get("catalogo.flux.btn.save"))).append("</button></div>\n");
-        sb.append("          </form>\n");
-        sb.append("        </div>\n");
+        Widget cardValue = Card.of(
+                Column.of(
+                        Text.of(Messages.get("catalogo.flux.summary.value")).modifier(new Modifier().cssClass("kpi-title")),
+                        Text.of(String.format("$%.2f", totalValue)).modifier(new Modifier().cssClass("kpi-value").style("color: var(--warning); font-size: 1.5rem; font-weight: 800; margin: 0.4rem 0;")),
+                        Text.of("Valoración en tiempo real").modifier(new Modifier().cssClass("kpi-sub"))
+                )
+        ).modifier(new Modifier().cssClass("ui-card kpi-card").style("background: var(--bg-subtle); padding: 1.2rem; border-radius: 10px; border: 1px solid var(--border-subtle);"));
 
-        // Tabla de Datos Reactiva JettraFlux
-        sb.append("        <div class=\"table-container ui-card\" style=\"border: 1px solid var(--border-subtle); border-radius: 10px; overflow: hidden; margin-bottom: 1.5rem;\">\n");
-        sb.append("          <table class=\"app-table\">\n");
-        sb.append("            <thead>\n");
-        sb.append("              <tr>\n");
-        sb.append("                <th>").append(escapeHtml(Messages.get("product.code"))).append("</th>\n");
-        sb.append("                <th>").append(escapeHtml(Messages.get("product.name"))).append("</th>\n");
-        sb.append("                <th>").append(escapeHtml(Messages.get("product.category"))).append("</th>\n");
-        sb.append("                <th>").append(escapeHtml(Messages.get("product.price"))).append("</th>\n");
-        sb.append("                <th>").append(escapeHtml(Messages.get("product.stock"))).append("</th>\n");
-        sb.append("                <th style=\"text-align: right;\">").append(escapeHtml(Messages.get("product.actions"))).append("</th>\n");
-        sb.append("              </tr>\n");
-        sb.append("            </thead>\n");
-        sb.append("            <tbody>\n");
+        Widget kpiGrid = Div.of(cardTotal, cardStock, cardValue)
+                .modifier(new Modifier().cssClass("kpi-grid").style("display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.25rem; margin-bottom: 1.5rem; width: 100%;"));
 
-        if (currentProducts.isEmpty()) {
-            sb.append("              <tr><td colspan=\"6\" style=\"text-align:center; padding: 2rem; color: var(--text-muted);\">")
-              .append(escapeHtml(Messages.get("catalogo.flux.empty"))).append("</td></tr>\n");
-        } else {
-            for (Product p : currentProducts) {
-                sb.append("              <tr>\n");
-                sb.append("                <td style=\"font-weight: 700; color: var(--primary);\">").append(escapeHtml(p.getId())).append("</td>\n");
-                sb.append("                <td style=\"font-weight: 500; color: var(--text-main);\">").append(escapeHtml(p.getName())).append("</td>\n");
-                sb.append("                <td><span style=\"background: var(--bg-subtle); color: var(--text-muted); padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.8rem; border: 1px solid var(--border-subtle);\">")
-                  .append(escapeHtml(p.getCategory())).append("</span></td>\n");
-                sb.append("                <td style=\"color: var(--success); font-weight: 700;\">$").append(String.format("%.2f", p.getPrice())).append("</td>\n");
-                sb.append("                <td style=\"color: var(--text-main);\">").append(p.getStock()).append(" ").append(escapeHtml(Messages.get("product.units"))).append("</td>\n");
-                sb.append("                <td style=\"text-align: right;\">\n");
-                sb.append("                  <form method=\"post\" action=\"/productos.xhtml\" style=\"display: inline;\">\n");
-                sb.append("                    <input type=\"hidden\" name=\"action\" value=\"delete\" />\n");
-                sb.append("                    <input type=\"hidden\" name=\"id\" value=\"").append(escapeHtml(p.getId())).append("\" />\n");
-                sb.append("                    <input type=\"hidden\" name=\"returnTo\" value=\"/dashboard.xhtml?view=catalogo-flux\" />\n");
-                sb.append("                    <button type=\"submit\" class=\"app-btn-danger\" style=\"padding: 0.25rem 0.6rem; font-size: 0.8rem;\">")
-                  .append(escapeHtml(Messages.get("product.action.delete"))).append("</button>\n");
-                sb.append("                  </form>\n");
-                sb.append("                </td>\n");
-                sb.append("              </tr>\n");
-            }
+        // 3. Formulario Reactivo JettraFlux para Añadir Productos
+        Widget formTitle = Header.of(4, Messages.get("catalogo.flux.form.title"))
+                .modifier(new Modifier().style("margin: 0 0 0.75rem 0; font-size: 0.95rem; font-weight: 700; color: var(--text-main);"));
+
+        Widget fieldId = Div.of(
+                Label.of(Messages.get("product.code")).modifier(new Modifier().style("display:block; font-size:0.75rem; color:var(--text-muted); font-weight:600; margin-bottom:0.25rem;")),
+                TextInput.builder().name("id").placeholder("PRD-10").required(true).modifier(new Modifier().cssClass("app-input")).build()
+        ).modifier(new Modifier().style("flex: 1; min-width: 110px;"));
+
+        Widget fieldName = Div.of(
+                Label.of(Messages.get("product.name")).modifier(new Modifier().style("display:block; font-size:0.75rem; color:var(--text-muted); font-weight:600; margin-bottom:0.25rem;")),
+                TextInput.builder().name("name").placeholder("Servidor Cloud Jettra").required(true).modifier(new Modifier().cssClass("app-input")).build()
+        ).modifier(new Modifier().style("flex: 2; min-width: 180px;"));
+
+        Widget fieldCategory = Div.of(
+                Label.of(Messages.get("product.category")).modifier(new Modifier().style("display:block; font-size:0.75rem; color:var(--text-muted); font-weight:600; margin-bottom:0.25rem;")),
+                TextInput.builder().name("category").placeholder("Hardware").value("Hardware").modifier(new Modifier().cssClass("app-input")).build()
+        ).modifier(new Modifier().style("flex: 1.5; min-width: 130px;"));
+
+        Widget fieldPrice = Div.of(
+                Label.of(Messages.get("product.price") + " ($)").modifier(new Modifier().style("display:block; font-size:0.75rem; color:var(--text-muted); font-weight:600; margin-bottom:0.25rem;")),
+                TextInput.builder().name("price").placeholder("1250.00").value("1250.00").inputType("number").attribute("step", "0.01").modifier(new Modifier().cssClass("app-input")).build()
+        ).modifier(new Modifier().style("flex: 1; min-width: 100px;"));
+
+        Widget fieldStock = Div.of(
+                Label.of(Messages.get("product.stock")).modifier(new Modifier().style("display:block; font-size:0.75rem; color:var(--text-muted); font-weight:600; margin-bottom:0.25rem;")),
+                TextInput.builder().name("stock").placeholder("10").value("10").inputType("number").modifier(new Modifier().cssClass("app-input")).build()
+        ).modifier(new Modifier().style("flex: 1; min-width: 80px;"));
+
+        Widget btnSubmit = Div.of(
+                Button.of(Messages.get("catalogo.flux.btn.save"))
+                        .attribute("type", "submit")
+                        .modifier(new Modifier().cssClass("app-btn-primary"))
+        ).modifier(new Modifier().style("align-self: flex-end;"));
+
+        Widget addForm = Form.of(
+                InputHidden.of("action", "save"),
+                InputHidden.of("returnTo", "/dashboard.xhtml?view=catalogo-flux"),
+                fieldId,
+                fieldName,
+                fieldCategory,
+                fieldPrice,
+                fieldStock,
+                btnSubmit
+        ).action("/productos.xhtml").method("POST").modifier(new Modifier().cssClass("responsive-form"));
+
+        Widget formPanel = Card.of(
+                Column.of(formTitle, addForm)
+        ).modifier(new Modifier().cssClass("ui-panel").style("background: var(--bg-subtle); padding: 1.25rem; border-radius: 10px; border: 1px solid var(--border-subtle); margin-bottom: 1.5rem; width: 100%;"));
+
+        // 4. Tabla de Datos Reactiva JettraFlux (Datatable)
+        List<Widget> tableHeaders = List.of(
+                Text.of(Messages.get("product.code")),
+                Text.of(Messages.get("product.name")),
+                Text.of(Messages.get("product.category")),
+                Text.of(Messages.get("product.price")),
+                Text.of(Messages.get("product.stock")),
+                Text.of(Messages.get("product.actions")).modifier(new Modifier().style("text-align: right;"))
+        );
+
+        List<List<Widget>> tableRows = new ArrayList<>();
+        for (Product p : currentProducts) {
+            Widget deleteButton = Button.of(Messages.get("product.action.delete"))
+                    .attribute("type", "submit")
+                    .modifier(new Modifier().cssClass("app-btn-danger").style("padding: 0.25rem 0.6rem; font-size: 0.8rem;"));
+
+            Widget deleteForm = Form.of(
+                    InputHidden.of("action", "delete"),
+                    InputHidden.of("id", p.getId()),
+                    InputHidden.of("returnTo", "/dashboard.xhtml?view=catalogo-flux"),
+                    deleteButton
+            ).action("/productos.xhtml").method("POST").modifier(new Modifier().style("display: inline; text-align: right;"));
+
+            List<Widget> rowCells = List.of(
+                    Text.of(p.getId()).modifier(new Modifier().style("font-weight: 700; color: var(--primary);")),
+                    Text.of(p.getName()).modifier(new Modifier().style("font-weight: 500; color: var(--text-main);")),
+                    Badge.neutral(p.getCategory()),
+                    Text.of(String.format("$%.2f", p.getPrice())).modifier(new Modifier().style("color: var(--success); font-weight: 700;")),
+                    Text.of(p.getStock() + " " + Messages.get("product.units")),
+                    deleteForm
+            );
+            tableRows.add(rowCells);
         }
 
-        sb.append("            </tbody>\n");
-        sb.append("          </table>\n");
-        sb.append("        </div>\n");
+        Widget dataTable = Datatable.ofWidgets(tableHeaders, tableRows)
+                .modifier(new Modifier().cssClass("app-table").style("width: 100%; border-collapse: collapse;"));
 
-        // Botones inferiores de navegación
-        sb.append("        <div style=\"display: flex; gap: 0.75rem; flex-wrap: wrap;\">\n");
-        sb.append("          <a href=\"/dashboard.xhtml\" class=\"app-btn-secondary\" style=\"text-decoration:none;\">Volver al Dashboard General</a>\n");
-        sb.append("          <a href=\"/productos.xhtml\" class=\"app-btn-secondary\" style=\"text-decoration:none;\">Ver Catálogo PrimeFaces (.xhtml)</a>\n");
-        sb.append("          <a href=\"/api/productos\" target=\"_blank\" class=\"app-btn-secondary\" style=\"text-decoration:none;\">Ver API RESTful (JSON)</a>\n");
-        sb.append("        </div>\n");
+        Widget tableContainer = Div.of(dataTable)
+                .modifier(new Modifier().cssClass("table-container ui-card").style("border: 1px solid var(--border-subtle); border-radius: 10px; overflow: hidden; margin-bottom: 1.5rem; width: 100%;"));
 
-        return sb.toString();
+        // 5. Enlaces y Botones de Navegación
+        Widget linkDashboard = Link.of("/dashboard.xhtml", "Volver al Dashboard General")
+                .modifier(new Modifier().cssClass("app-btn-secondary").style("text-decoration:none;"));
+        Widget linkProducts = Link.of("/productos.xhtml", "Ver Catálogo PrimeFaces (.xhtml)")
+                .modifier(new Modifier().cssClass("app-btn-secondary").style("text-decoration:none;"));
+        Widget linkApi = Link.of("/api/productos", "Ver API RESTful (JSON)")
+                .target("_blank")
+                .modifier(new Modifier().cssClass("app-btn-secondary").style("text-decoration:none;"));
+
+        Widget footerNav = Row.of(linkDashboard, linkProducts, linkApi)
+                .modifier(new Modifier().style("display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 1rem;"));
+
+        // Árbol raíz compuesto exclusivamente por Widgets JettraFlux
+        return Column.of(
+                headerSection,
+                kpiGrid,
+                formPanel,
+                tableContainer,
+                footerNav
+        ).modifier(new Modifier().style("width: 100%; display: flex; flex-direction: column; gap: 0.5rem;"));
     }
 
-    private static String escapeHtml(String s) {
-        if (s == null) return "";
-        return s.replace("&", "&amp;")
-                .replace("<", "&lt;")
-                .replace(">", "&gt;")
-                .replace("\"", "&quot;");
+    /**
+     * Renderizado HTML nativo a través del motor de componentes JettraFlux.
+     * Cero uso de concatenación manual o StringBuilder en esta clase.
+     */
+    public String renderSectionHtml() {
+        return build().render(Themes.Core());
+    }
+
+    public void renderSectionHtml(PrintWriter out) {
+        if (out != null) {
+            out.println(renderSectionHtml());
+        }
     }
 }
