@@ -56,6 +56,11 @@ public class JettraServer {
         return new JettraServer(config);
     }
 
+    public static String resolvePath(String path) {
+        if (path == null || path.isBlank()) return "/";
+        return path.startsWith("/") ? path : "/" + path;
+    }
+
     private void setupDefaultEndpoints() {
         router.get("/health", healthService::handleHealth);
         router.get("/health/live", healthService::handleLive);
