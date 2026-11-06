@@ -28,6 +28,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <jettra.memory.version>1.0-SNAPSHOT</jettra.memory.version>
         <jettra.offheap.version>1.0-SNAPSHOT</jettra.offheap.version>
+        <jettra.report.version>1.0.0-SNAPSHOT</jettra.report.version>
     </properties>
 
     <dependencyManagement>
@@ -59,6 +60,14 @@
                 <groupId>io.jettra</groupId>
                 <artifactId>JettraStore-OffHeap</artifactId>
                 <version>${jettra.offheap.version}</version>
+            </dependency>
+
+            <!-- Jettra Frameworks & Ecosistema -->
+            <dependency>
+                <groupId>io.jettra</groupId>
+                <artifactId>JettraReport</artifactId>
+                <version>${jettra.report.version}</version>
+                <scope>provided</scope>
             </dependency>
         </dependencies>
     </dependencyManagement>

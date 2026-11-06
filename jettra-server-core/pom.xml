@@ -39,6 +39,11 @@
             <artifactId>JettraCDI</artifactId>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>io.jettra</groupId>
+            <artifactId>JettraReport</artifactId>
+            <scope>provided</scope>
+        </dependency>
 
         <!-- Motores de almacenamiento -->
         <dependency>

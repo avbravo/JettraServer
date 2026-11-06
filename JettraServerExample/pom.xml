@@ -64,6 +64,11 @@
             <groupId>io.jettra</groupId>
             <artifactId>JettraFlux</artifactId>
         </dependency>
+        <dependency>
+            <groupId>io.jettra</groupId>
+            <artifactId>JettraReport</artifactId>
+            <scope>provided</scope>
+        </dependency>
 
         <!-- Testing con JettraTest (100% libre de JUnit) -->
         <dependency>
