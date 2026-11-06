@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="jakarta.faces.html"
+      xmlns:f="jakarta.faces.core"
+      xmlns:ui="jakarta.faces.facelets"
+      xmlns:p="primefaces">
+<h:head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title><ui:insert name="title">JettraServer</ui:insert></title>
+    <style>
+        :root {
+            --bg-app: #f8fafc;
+            --bg-card: #ffffff;
+            --bg-topbar: #0f172a;
+            --bg-sidebar: #ffffff;
+            --bg-footer: #0f172a;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border-subtle: #e2e8f0;
+            --primary: #2563eb;
+        }
+        [data-theme="dark"] {
+            --bg-app: #0b1120;
+            --bg-card: #1e293b;
+            --bg-topbar: #020617;
+            --bg-sidebar: #0f172a;
+            --bg-footer: #020617;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border-subtle: #334155;
+            --primary: #38bdf8;
+        }
+        body {
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            background: var(--bg-app);
+            color: var(--text-main);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            transition: background 0.2s, color 0.2s;
+        }
+        @media (max-width: 900px) {
+            .layout-left { display: none; }
+            .hide-mobile { display: none !important; }
+        }
+    </style>
+    <script>
+        function toggleTheme() {
+            const cur = document.documentElement.getAttribute('data-theme') || 'white';
+            const next = cur === 'dark' ? 'white' : 'dark';
+            document.documentElement.setAttribute('data-theme', next);
+            localStorage.setItem('jettra-theme', next);
+            document.cookie = "jettra_theme=" + next + "; path=/; max-age=31536000";
+        }
+        const saved = localStorage.getItem('jettra-theme');
+        if (saved) document.documentElement.setAttribute('data-theme', saved);
+    </script>
+</h:head>
+<h:body>
+
+    <!-- TOP SECTION -->
+    <header class="layout-top" style="height: 60px; background: var(--bg-topbar); color: white; display: flex; align-items: center; justify-content: space-between; padding: 0 1.5rem; position: sticky; top: 0; z-index: 100;">
+        <ui:insert name="top">
+            <div style="font-weight: bold; font-size: 1.1rem; display: flex; align-items: center; gap: 0.5rem;">
+                <span style="background: var(--primary); padding: 0.2rem 0.5rem; border-radius: 6px;">JS</span>
+                <span>JettraServer Enterprise</span>
+            </div>
+            <div style="display: flex; gap: 0.75rem; align-items: center;">
+                <button type="button" onclick="toggleTheme()" style="background: rgba(255,255,255,0.15); color: white; border: 1px solid rgba(255,255,255,0.3); border-radius: 20px; padding: 0.35rem 0.75rem; cursor: pointer; font-size: 0.8rem;">
+                    🌙/☀️ <span class="hide-mobile">Tema</span>
+                </button>
+                <p:tag value="#{dashboardBean.storageMode}" severity="info" styleClass="hide-mobile"/>
+                <p:button outcome="/login.xhtml" value="Cerrar Sesión" icon="pi pi-power-off" styleClass="ui-button-danger ui-button-sm"/>
+            </div>
+        </ui:insert>
+    </header>
+
+    <!-- WRAPPER (LEFT + CENTER) -->
+    <div class="layout-wrapper" style="display: flex; flex: 1;">
+        <!-- LEFT SECTION -->
+        <aside class="layout-left" style="width: 260px; background: var(--bg-sidebar); border-right: 1px solid var(--border-subtle); padding: 1.5rem 1rem;">
+            <ui:insert name="left">
+                <p:menu style="width: 100%;">
+                    <p:submenu label="Navegación General">
+                        <p:menuitem value="Dashboard" outcome="/dashboard.xhtml" icon="pi pi-home"/>
+                        <p:menuitem value="Catálogo JPA" outcome="/productos.xhtml" icon="pi pi-box"/>
+                        <p:menuitem value="Usuarios" outcome="/usuarios.xhtml" icon="pi pi-users"/>
+                    </p:submenu>
+                    <p:submenu label="⚡ Vistas JettraFlux (En Centro)">
+                        <p:menuitem value="Catálogo Reactivo (Flux)" url="/flux/catalogo" icon="pi pi-shopping-bag"/>
+                        <p:menuitem value="Monitor Almacenamiento" url="/dashboard.xhtml?view=storage-monitor" icon="pi pi-database"/>
+                        <p:menuitem value="Telemetría de Red" url="/dashboard.xhtml?view=telemetry" icon="pi pi-chart-line"/>
+                        <p:menuitem value="Contador Reactivo" url="/dashboard.xhtml?view=counter" icon="pi pi-sliders-h"/>
+                    </p:submenu>
+                    <p:submenu label="🔌 RESTful Services">
+                        <p:menuitem value="/api/productos" url="/api/productos" target="_blank" icon="pi pi-external-link"/>
+                        <p:menuitem value="/api/info" url="/api/info" target="_blank" icon="pi pi-external-link"/>
+                        <p:menuitem value="/metrics" url="/metrics" target="_blank" icon="pi pi-external-link"/>
+                    </p:submenu>
+                </p:menu>
+            </ui:insert>
+        </aside>
+
+        <!-- CENTER SECTION -->
+        <main class="layout-center" style="flex: 1; padding: 2rem; overflow-y: auto;">
+            <ui:insert name="center">
+                <h2>Contenido Principal</h2>
+            </ui:insert>
+        </main>
+    </div>
+
+    <!-- FOOTER SECTION -->
+    <footer class="layout-footer" style="height: 40px; background: var(--bg-footer); color: #94a3b8; display: flex; align-items: center; justify-content: space-between; padding: 0 1.5rem; font-size: 0.8rem; border-top: 1px solid var(--border-subtle);">
+        <ui:insert name="footer">
+            <span>JettraServer • Jakarta EE 11 • Java 25 Virtual Threads</span>
+            <span>Modo Persistencia: #{dashboardBean.storageMode}</span>
+        </ui:insert>
+    </footer>
+
+</h:body>
+</html>

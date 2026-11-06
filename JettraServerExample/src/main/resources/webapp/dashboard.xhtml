@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="jakarta.faces.html"
+      xmlns:f="jakarta.faces.core"
+      xmlns:ui="jakarta.faces.facelets"
+      xmlns:p="primefaces">
+
+<f:loadBundle basename="messages" var="msg"/>
+
+<ui:composition template="template.xhtml">
+    <ui:define name="title">#{msg['dashboard.title']} - #{msg['app.title']}</ui:define>
+
+    <ui:define name="center">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 0.5rem;">
+            <div>
+                <h1 style="font-size: 1.6rem; font-weight: 700; margin: 0 0 0.25rem 0;">#{msg['dashboard.panel']}</h1>
+                <p style="color: var(--text-muted); margin: 0;">#{msg['dashboard.welcome']}</p>
+            </div>
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                <p:button outcome="/dashboard.xhtml" value="General" styleClass="ui-button-sm ui-button-info"/>
+                <p:button href="/flux/catalogo" value="🛍️ Catálogo Flux" styleClass="ui-button-sm ui-button-success"/>
+                <p:button outcome="/dashboard.xhtml" value="Storage Flux" styleClass="ui-button-sm ui-button-secondary">
+                    <f:param name="view" value="storage-monitor"/>
+                </p:button>
+                <p:button outcome="/dashboard.xhtml" value="Telemetría Flux" styleClass="ui-button-sm ui-button-secondary">
+                    <f:param name="view" value="telemetry"/>
+                </p:button>
+                <p:button outcome="/dashboard.xhtml" value="Contador Flux" styleClass="ui-button-sm ui-button-secondary">
+                    <f:param name="view" value="counter"/>
+                </p:button>
+            </div>
+        </div>
+
+        <div class="grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.25rem; margin-bottom: 2rem;">
+            <p:card header="Modo Almacenamiento">
+                <h3 style="color: var(--primary); margin: 0.5rem 0;">#{dashboardBean.storageMode}</h3>
+                <p>#{dashboardBean.storageDescription}</p>
+            </p:card>
+
+            <p:card header="Productos en JPA">
+                <h3 style="margin: 0.5rem 0;">#{dashboardBean.totalProducts}</h3>
+                <p:link outcome="/productos.xhtml" value="Gestionar catálogo →"/>
+            </p:card>
+
+            <p:card header="Concurrencia">
+                <h3 style="color: #8b5cf6; margin: 0.5rem 0;">Project Loom</h3>
+                <p>Virtual Threads activos</p>
+            </p:card>
+
+            <p:card header="Tiempo de Actividad">
+                <h3 style="color: #059669; margin: 0.5rem 0;">#{dashboardBean.uptimeFormatted}</h3>
+                <p>Cores CPU: #{dashboardBean.cpuCores}</p>
+            </p:card>
+        </div>
+
+        <p:panel header="⚡ Vistas JettraFlux en Sección Center">
+            <p>Accede directamente a los componentes reactivos renderizados dentro de esta sección central del Dashboard:</p>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem; margin-top: 1rem;">
+                <div style="border: 1px solid var(--border-subtle); padding: 1rem; border-radius: 8px;">
+                    <a href="/flux/catalogo" style="text-decoration:none; font-weight:bold; color:#0284c7;">🛍️ Catálogo Reactivo (Flux)</a>
+                    <p style="font-size:0.85rem; color:var(--text-muted); margin:0.35rem 0 0 0;">Gestión reactiva de inventario con sincronización inmediata.</p>
+                </div>
+                <div style="border: 1px solid var(--border-subtle); padding: 1rem; border-radius: 8px;">
+                    <a href="/dashboard.xhtml?view=storage-monitor" style="text-decoration:none; font-weight:bold; color:var(--primary);">🚀 Monitor de Almacenamiento</a>
+                    <p style="font-size:0.85rem; color:var(--text-muted); margin:0.35rem 0 0 0;">Inspección de memoria JVM_RAM, DISK_MEMORY y OFF_HEAP Slotted-Page.</p>
+                </div>
+                <div style="border: 1px solid var(--border-subtle); padding: 1rem; border-radius: 8px;">
+                    <a href="/dashboard.xhtml?view=telemetry" style="text-decoration:none; font-weight:bold; color:#059669;">📈 Telemetría del Servidor</a>
+                    <p style="font-size:0.85rem; color:var(--text-muted); margin:0.35rem 0 0 0;">Métricas en vivo de hilos Loom y sockets NIO.</p>
+                </div>
+                <div style="border: 1px solid var(--border-subtle); padding: 1rem; border-radius: 8px;">
+                    <a href="/dashboard.xhtml?view=counter" style="text-decoration:none; font-weight:bold; color:#d97706;">🎛️ Contador Reactivo</a>
+                    <p style="font-size:0.85rem; color:var(--text-muted); margin:0.35rem 0 0 0;">Control reactivo bidireccional en tiempo real.</p>
+                </div>
+            </div>
+        </p:panel>
+    </ui:define>
+</ui:composition>
+</html>

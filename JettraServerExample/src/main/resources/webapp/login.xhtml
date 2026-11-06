@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="jakarta.faces.html"
+      xmlns:f="jakarta.faces.core"
+      xmlns:p="primefaces">
+<f:loadBundle basename="messages" var="msg"/>
+<h:head>
+    <meta charset="UTF-8"/>
+    <title>#{msg['login.title']} - #{msg['app.title']}</title>
+</h:head>
+<h:body styleClass="ui-widget-content">
+    <div class="login-wrapper">
+        <p:card style="width: 420px; margin: 100px auto;">
+            <f:facet name="title">
+                <div style="text-align: center;">
+                    <h2>#{msg['app.title']}</h2>
+                    <p style="font-size: 0.85rem; color: #64748b;">#{msg['app.subtitle']}</p>
+                </div>
+            </f:facet>
+
+            <h:form id="loginForm">
+                <p:messages id="messages" showDetail="true" closable="true"/>
+
+                <div class="field" style="margin-bottom: 1rem;">
+                    <p:outputLabel for="username" value="#{msg['login.username']}"/>
+                    <p:inputText id="username" value="#{loginBean.username}" required="true"
+                                 placeholder="admin" style="width: 100%;"/>
+                </div>
+
+                <div class="field" style="margin-bottom: 1.5rem;">
+                    <p:outputLabel for="password" value="#{msg['login.password']}"/>
+                    <p:password id="password" value="#{loginBean.password}" required="true"
+                                placeholder="admin123" feedback="false" style="width: 100%;"/>
+                </div>
+
+                <p:commandButton value="#{msg['login.button']}" action="#{loginBean.login}"
+                                 update="messages" icon="pi pi-sign-in" style="width: 100%;"/>
+            </h:form>
+        </p:card>
+    </div>
+</h:body>
+</html>
+

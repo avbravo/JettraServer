@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>io.jettra</groupId>
+        <artifactId>jettraframeworkscontainers</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+        <relativePath>../jettraframeworkscontainers/pom.xml</relativePath>
+    </parent>
+
+    <artifactId>JettraServer</artifactId>
+    <packaging>pom</packaging>
+    <name>JettraServer</name>
+    <description>Servidor de aplicaciones modular de ultra-alto rendimiento en Java 25 con soporte para todas las especificaciones Jakarta EE, persistencia triple modo y renderizado JettraFlux</description>
+
+    <modules>
+        <module>jettra-server-core</module>
+        <module>jettra-server-jakarta</module>
+        <module>jettra-server-flux</module>
+        <module>JettraServerExample</module>
+    </modules>
+
+    <properties>
+        <maven.compiler.release>25</maven.compiler.release>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <jettra.memory.version>1.0-SNAPSHOT</jettra.memory.version>
+        <jettra.offheap.version>1.0-SNAPSHOT</jettra.offheap.version>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <!-- Módulos internos de JettraServer -->
+            <dependency>
+                <groupId>io.jettra</groupId>
+                <artifactId>jettra-server-core</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.jettra</groupId>
+                <artifactId>jettra-server-jakarta</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.jettra</groupId>
+                <artifactId>jettra-server-flux</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <!-- Jettra Storage Engines -->
+            <dependency>
+                <groupId>io.jettra</groupId>
+                <artifactId>JettraMemory</artifactId>
+                <version>${jettra.memory.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.jettra</groupId>
+                <artifactId>JettraStore-OffHeap</artifactId>
+                <version>${jettra.offheap.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <build>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <version>3.13.0</version>
+                    <configuration>
+                        <release>25</release>
+                        <compilerArgs>
+                            <arg>--enable-preview</arg>
+                        </compilerArgs>
+                    </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-surefire-plugin</artifactId>
+                    <version>3.3.0</version>
+                    <configuration>
+                        <argLine>--enable-preview --enable-native-access=ALL-UNNAMED -Xms128m -Xmx512m</argLine>
+                    </configuration>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+    </build>
+</project>
