@@ -234,5 +234,39 @@ public class JettraServerExampleTest {
             server.stop();
         }
     }
+
+    @Test
+    @DisplayName("8. Verificar integración de Swagger-UI y especificación OpenAPI en JettraServerExample")
+    public void testSwaggerUiIntegration() throws Exception {
+        JettraServer server = App.startApplication(TEST_PORT + 7, StorageMode.JVM_RAM);
+        try {
+            HttpClient client = HttpClient.newHttpClient();
+
+            // 1. Swagger-UI
+            HttpRequest reqSwagger = HttpRequest.newBuilder()
+                .uri(URI.create("http://127.0.0.1:" + (TEST_PORT + 7) + "/swagger-ui"))
+                .GET()
+                .build();
+            HttpResponse<String> resSwagger = client.send(reqSwagger, HttpResponse.BodyHandlers.ofString());
+            JettraAssert.assertEquals(200, resSwagger.statusCode(), "Swagger-UI debe responder HTTP 200");
+            JettraAssert.assertTrue(resSwagger.body().contains("OpenAPI 3.0.0"), "Debe contener el badge de OpenAPI 3.0.0");
+            JettraAssert.assertTrue(resSwagger.body().contains("Panel de Acreditación de Usuario"), "Debe incluir el panel de acreditación");
+            JettraAssert.assertTrue(resSwagger.body().contains("jettraLogin"), "Debe contener la función JS de autenticación");
+
+            // 2. OpenAPI Spec JSON
+            HttpRequest reqOpenApi = HttpRequest.newBuilder()
+                .uri(URI.create("http://127.0.0.1:" + (TEST_PORT + 7) + "/openapi.json"))
+                .GET()
+                .build();
+            HttpResponse<String> resOpenApi = client.send(reqOpenApi, HttpResponse.BodyHandlers.ofString());
+            JettraAssert.assertEquals(200, resOpenApi.statusCode(), "openapi.json debe responder HTTP 200");
+            JettraAssert.assertTrue(resOpenApi.body().contains("\"openapi\""), "Debe tener clave openapi");
+            JettraAssert.assertTrue(resOpenApi.body().contains("3.0.0"), "Debe ser versión OpenAPI 3.0.0");
+            JettraAssert.assertTrue(resOpenApi.body().contains("/api/productos"), "Debe listar el endpoint de productos");
+            JettraAssert.assertTrue(resOpenApi.body().contains("/api/info"), "Debe listar el endpoint de info");
+        } finally {
+            server.stop();
+        }
+    }
 }
 

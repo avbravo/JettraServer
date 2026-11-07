@@ -102,6 +102,33 @@ public class FluxServerIntegrationTest {
     }
 
     @Test
+    @DisplayName("Verificar Swagger-UI interactivo con Acreditación generado por JettraFlux")
+    public void testSwaggerFluxEndpoint() throws Exception {
+        ServerConfig config = new ServerConfig().setPort(9211).setStorageMode(StorageMode.JVM_RAM);
+        JettraServer server = JettraServer.create(config);
+
+        FluxModule flux = FluxModule.attach(server);
+        flux.swagger("/swagger-ui", java.util.List.of());
+
+        server.start();
+
+        HttpClient client = HttpClient.newHttpClient();
+        HttpRequest req = HttpRequest.newBuilder()
+            .uri(URI.create("http://127.0.0.1:9211/swagger-ui"))
+            .GET()
+            .build();
+
+        HttpResponse<String> res = client.send(req, HttpResponse.BodyHandlers.ofString());
+
+        JettraAssert.assertEquals(200, res.statusCode(), "Status HTTP de Swagger debe ser 200");
+        JettraAssert.assertTrue(res.body().contains("JettraServer API") || res.body().contains("OpenAPI"), "Debe contener el título OpenAPI");
+        JettraAssert.assertTrue(res.body().contains("Panel de Acreditación de Usuario"), "Debe contener el panel de acreditación");
+        JettraAssert.assertTrue(res.body().contains("jettraLogin"), "Debe contener la función JS de acreditación");
+
+        server.stop();
+    }
+
+    @Test
     @DisplayName("Verificar puente Jakarta Faces a JettraFlux")
     public void testFluxFacesBridge() {
         FacesContext context = new FacesContext("/views/home.xhtml");

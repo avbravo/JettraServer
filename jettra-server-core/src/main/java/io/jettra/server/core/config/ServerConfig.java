@@ -47,22 +47,25 @@ public class ServerConfig {
     private void loadDefaults() {
         Properties props = new Properties();
 
-        // 1. Cargar desde classpath jettraserver.config
-        try (InputStream is = getClass().getClassLoader().getResourceAsStream("jettraserver.config")) {
+        // 1. Cargar desde el classpath oficial según Eclipse MicroProfile Config 3.1
+        try (InputStream is = getClass().getClassLoader().getResourceAsStream("META-INF/microprofile-config.properties")) {
             if (is != null) {
                 props.load(is);
             }
         } catch (Exception ignored) {}
 
-        // Fallback classpath jettra-server.properties
-        try (InputStream is = getClass().getClassLoader().getResourceAsStream("jettra-server.properties")) {
+        // Fallback classpath raíz microprofile-config.properties
+        try (InputStream is = getClass().getClassLoader().getResourceAsStream("microprofile-config.properties")) {
             if (is != null) {
                 props.load(is);
             }
         } catch (Exception ignored) {}
 
         // 2. Archivo personalizado especificado por propiedad de sistema o variable de entorno
-        String customConfigPath = resolveString("jettraserver.config", "JETTRASERVER_CONFIG", null);
+        String customConfigPath = resolveString("microprofile.config.file", "MP_CONFIG_FILE", null);
+        if (customConfigPath == null) {
+            customConfigPath = resolveString("microprofile-config.file", "MICROPROFILE_CONFIG_FILE", null);
+        }
         if (customConfigPath != null) {
             Path customFile = Path.of(customConfigPath);
             if (Files.exists(customFile)) {
@@ -72,8 +75,12 @@ public class ServerConfig {
             }
         }
 
-        // 3. Buscar en el directorio de ejecución actual o ./config
-        String[] candidatePaths = {"./jettraserver.config", "./config/jettraserver.config", "./jettra-server.properties", "./config/jettra-server.properties"};
+        // 3. Buscar en el directorio de ejecución actual o subdirectorios estándar
+        String[] candidatePaths = {
+            "./microprofile-config.properties",
+            "./META-INF/microprofile-config.properties",
+            "./config/microprofile-config.properties"
+        };
         for (String candidate : candidatePaths) {
             Path file = Path.of(candidate);
             if (Files.exists(file)) {

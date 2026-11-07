@@ -102,12 +102,18 @@ public class App {
         flux.page("/flux/counter", "JettraFlux - Contador Reactivo", InteractiveCounterFluxView.class);
         flux.page("/flux/catalogo", "JettraFlux - Catálogo de Productos", () -> new CatalogoFlux(productService));
 
+        // 6. Registrar Swagger-UI con Acreditación de Seguridad usando JettraFlux
+        flux.swagger("/swagger-ui", "JettraServerExample - Catálogo & Microservicios API", java.util.List.of(
+            ProductResource.class,
+            ServerInfoResource.class
+        ));
+
         // Iniciar el servidor
         try {
             server.start();
         } catch (java.net.BindException e) {
             System.err.println("❌ ERROR: El puerto " + port + " ya está ocupado por otro proceso o contenedor (ej. Docker).");
-            System.err.println("   -> Puedes cambiar el puerto en 'jettraserver.config' (server.port=8080) o pasar '-Dserver.port=8085'.");
+            System.err.println("   -> Puedes cambiar el puerto en 'microprofile-config.properties' (server.port=8080) o pasar '-Dserver.port=8085'.");
             throw new RuntimeException("El puerto " + port + " ya está en uso (BindException).", e);
         } catch (Exception e) {
             throw new RuntimeException("Error iniciando JettraServer en puerto " + port, e);
@@ -118,6 +124,7 @@ public class App {
         System.out.println(" -> URL Login PrimeFaces : http://localhost:" + port + "/login.xhtml");
         System.out.println(" -> URL Dashboard        : http://localhost:" + port + "/dashboard.xhtml");
         System.out.println(" -> URL Catálogo JPA     : http://localhost:" + port + "/productos.xhtml");
+        System.out.println(" -> Swagger-UI (JettraFlux): http://localhost:" + port + "/swagger-ui");
         System.out.println(" -> Vistas JettraFlux    : http://localhost:" + port + "/flux/storage-monitor");
         System.out.println("                         : http://localhost:" + port + "/flux/telemetry");
         System.out.println("                         : http://localhost:" + port + "/flux/counter");

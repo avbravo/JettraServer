@@ -42,6 +42,23 @@ public class FluxModule {
         return this;
     }
 
+    public FluxModule swagger(java.util.List<Class<?>> controllers) {
+        return swagger("/swagger-ui", "JettraServer OpenAPI Explorer", controllers);
+    }
+
+    public FluxModule swagger(String path, java.util.List<Class<?>> controllers) {
+        return swagger(path, "JettraServer OpenAPI Explorer", controllers);
+    }
+
+    public FluxModule swagger(String path, String pageTitle, java.util.List<Class<?>> controllers) {
+        io.jettra.server.flux.swagger.SwaggerFluxHandler handler = new io.jettra.server.flux.swagger.SwaggerFluxHandler(controllers, pageTitle);
+        server.get(path, handler);
+        server.get(path + "/openapi.json", handler::handleOpenApiJson);
+        server.get("/openapi.json", handler::handleOpenApiJson);
+        server.get("/swagger.json", handler::handleOpenApiJson);
+        return this;
+    }
+
     public FluxRenderer getRenderer() {
         return renderer;
     }

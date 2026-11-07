@@ -305,7 +305,7 @@ public class JettraServer {
         System.out.println("    / / _ \\/ __/ __/ ___/ __ `/  \\__ \\/ _ \\/ ___/ | / / _ \\/ ___/                ");
         System.out.println("   / /  __/ /_/ /_/ /  / /_/ /  ___/ /  __/ /   | |/ /  __/ /                     ");
         System.out.println(" _/ /\\___/\\__/\\__/_/   \\__,_/  /____/\\___/_/    |___/\\___/_/                      ");
-        System.out.println("/___/   Google Antigravity Enterprise Application Server - Java 25 & Project Loom ");
+        System.out.println("/___/   Jettra Enterprise Application Server  ");
         System.out.println("==================================================================================");
         System.out.println(" -> Escuchando en      : http://" + config.getHost() + ":" + getPort() + config.getContextPath());
         System.out.println(" -> Modo Persistencia  : [" + config.getStorageMode().name() + "] - " + config.getStorageMode().getDescription());

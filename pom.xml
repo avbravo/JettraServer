@@ -21,6 +21,7 @@
         <module>jettra-server-jakarta</module>
         <module>jettra-server-flux</module>
         <module>JettraServerExample</module>
+        <module>JettraServerBackEndExample</module>
     </modules>
 
     <properties>

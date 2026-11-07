@@ -11,9 +11,11 @@ Servidor de aplicaciones modular de ultra-alto rendimiento para **Java 25+**, co
 3. [Motor de Persistencia Tri-Modal (JettraStorageEngine)](#3-motor-de-persistencia-tri-modal-jettrastorageengine)
 4. [JettraSecurityDB: Base de Datos Embebida de Seguridad](#4-jettrasecuritydb-base-de-datos-embebida-de-seguridad)
 5. [Jakarta EE 11 y Eclipse MicroProfile con CDI Estándar](#5-jakarta-ee-11-y-eclipse-microprofile-con-cdi-estándar)
-6. [JettraFlux: Renderizado de Interfaz Reactiva](#6-jettraflux-renderizado-de-interfaz-reactiva)
-7. [Framework de Pruebas JettraTest](#7-framework-de-pruebas-jettratest)
-8. [Configuración Exhaustiva (`jettraserver.config`) y Despliegue](#8-configuración-exhaustiva-jettraserverconfig-y-despliegue)
+6. [JettraFlux: Renderizado de Interfaz Reactiva y Swagger-UI](#6-jettraflux-renderizado-de-interfaz-reactiva)
+7. [Proyecto de Microservicios: JettraServerBackEndExample](#7-proyecto-de-microservicios-jettraserverbackendexample)
+8. [Swagger-UI en JettraServerExample](#8-swagger-ui-en-jettraserverexample)
+9. [Framework de Pruebas JettraTest](#9-framework-de-pruebas-jettratest)
+10. [Configuración Estándar MicroProfile (`microprofile-config.properties`) y Despliegue](#10-configuración-estándar-microprofile-microprofile-configproperties-y-despliegue)
 
 ---
 
@@ -53,8 +55,9 @@ El proyecto se organiza en una arquitectura multi-módulo altamente desacoplada 
 | :--- | :--- | :--- |
 | **`jettra-server-core`** | [jettra-server-core](file:///home/avbravo/NetBeansProjects/jettrastack_local/JettraServer/jettra-server-core) | Servidor de red NIO, enrutador HTTP/1.1, persistencia tri-modal, `JettraSecurityDB`, autenticación JWT y métricas. |
 | **`jettra-server-jakarta`** | [jettra-server-jakarta](file:///home/avbravo/NetBeansProjects/jettrastack_local/JettraServer/jettra-server-jakarta) | Orquestador Jakarta EE 11 (CDI 4.1 oficial vía Weld SE, Servlet 6.1, Faces 4.1, JAX-RS 4.0, JPA 3.2, etc.) y Eclipse MicroProfile. |
-| **`jettra-server-flux`** | [jettra-server-flux](file:///home/avbravo/NetBeansProjects/jettrastack_local/JettraServer/jettra-server-flux) | Motor UI Server-Driven que renderiza componentes interactivos sin concatenación de cadenas mediante árbol de objetos reactivos. |
+| **`jettra-server-flux`** | [jettra-server-flux](file:///home/avbravo/NetBeansProjects/jettrastack_local/JettraServer/jettra-server-flux) | Motor UI Server-Driven que renderiza componentes interactivos sin concatenación de cadenas mediante árbol de objetos reactivos. Incluye la implementación nativa de **Swagger-UI con Acreditación de Seguridad**. |
 | **`JettraServerExample`** | [JettraServerExample](file:///home/avbravo/NetBeansProjects/jettrastack_local/JettraServer/JettraServerExample) | Aplicación empresarial completa de ejemplo integrando vistas Facelets (`.xhtml`), vistas JettraFlux, beans Jakarta CDI y seguridad. |
+| **`JettraServerBackEndExample`** | [JettraServerBackEndExample](file:///home/avbravo/NetBeansProjects/jettrastack_local/JettraServer/JettraServerBackEndExample) | Proyecto backend dedicado a microservicios REST de alto rendimiento en Java 25+, autenticación estricta JWT Bearer, JettraSecurityDB y Swagger-UI interactivo en JettraFlux. |
 
 ---
 
@@ -180,15 +183,75 @@ El módulo [`jettra-server-flux`](file:///home/avbravo/NetBeansProjects/jettrast
   - `StorageMonitorFluxView`: Dashboard reactivo en tiempo real que visualiza el uso del motor de persistencia tri-modal y métricas de memoria.
   - `TelemetryFluxView`: Métricas de CPU, hilos virtuales de Loom y Garbage Collector.
 
+### 6.1. Swagger-UI con Acreditación de Seguridad en JettraFlux
+El componente [`SwaggerFluxView`](file:///home/avbravo/NetBeansProjects/jettrastack_local/JettraServer/jettra-server-flux/src/main/java/io/jettra/server/flux/swagger/SwaggerFluxView.java) reemplaza a Swagger-UI JavaScript tradicional por una interfaz moderna, ultra-ligera y reactiva renderizada 100% con widgets de JettraFlux:
+
+- **Acreditación de Usuario en Vivo (JettraSecurityDB):**
+  - Panel superior interactivo que permite autenticarse con credenciales (`admin` / `admin`) o ingresar manualmente un token JWT Bearer existente.
+  - Detecta y muestra dinámicamente los roles concedidos (`ADMIN`, `MANAGER`, etc.) y el estado de la sesión (`🔒 No Acreditado` vs `🔓 Acreditado como: admin`).
+- **Explorador Interactivo de Endpoints:**
+  - Agrupación por tags temáticos y badges cromáticos por verbo HTTP (`GET` en azul, `POST` en verde, `PUT` en ámbar, `DELETE` en rojo).
+  - Indicadores de seguridad por endpoint (`🔒 Requiere: [ADMIN]` vs `🌐 Público`).
+  - Consola de prueba integrada ("Try it out"): formulario de parámetros de ruta (`PathParam`), consulta (`QueryParam`) y cuerpo JSON editable (`RequestBody`).
+  - Inyección automática del encabezado `Authorization: Bearer <token>` en todas las peticiones fetch de prueba cuando el usuario está acreditado.
+  - Medición de latencia en milisegundos y visor formateado con resaltado de la respuesta JSON.
+- **Habilitación en JettraServer:**
+  ```java
+  FluxModule.attach(server)
+      .swagger("/swagger-ui", "API Microservicios", List.of(CustomerResource.class, OrderResource.class));
+  ```
+
 ---
 
-## 7. Framework de Pruebas JettraTest
+## 7. Proyecto de Microservicios: JettraServerBackEndExample
+
+[`JettraServerBackEndExample`](file:///home/avbravo/NetBeansProjects/jettrastack_local/JettraServer/JettraServerBackEndExample) es una implementación de referencia orientada exclusivamente a arquitecturas de microservicios backend:
+
+- **Microservicio de Clientes (`CustomerResource`):** Endpoints protegidos para consulta, creación y baja de clientes con validación de roles (`ADMIN`, `MANAGER`, `USER`).
+- **Microservicio de Órdenes (`OrderResource`):** Gestión de pedidos, facturación y cancelaciones atómicas.
+- **Telemetría y Estado (`SystemInfoResource`):** Ping público para health checks de orquestadores (Kubernetes / Docker) e información del entorno Java 25.
+- **Filtro de Seguridad Centralizado:** Valida tokens JWT Bearer contra `JettraSecurityDB` antes de despachar a los microservicios de negocio.
+- **Swagger-UI & OpenAPI 3.0.0:** Documentación interactiva en `/swagger-ui` y especificación viva en `/openapi.json`.
+- **Modo Demonio y Ejecución Continua (`server.await()`):** `JettraServerBackEndExample` implementa un ciclo de vida persistente en `App.main()`:
+  ```java
+  public static void main(String[] args) {
+      App app = new App();
+      app.startApplication(args);
+
+      Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+          System.out.println("[App] Solicitud de apagado recibida. Deteniendo JettraServerBackEndExample...");
+          app.stop();
+      }));
+
+      try {
+          System.out.println("[App] Proceso en ejecución continua (escuchando microservicios). Presione Ctrl+C para detener.");
+          app.getServer().await();
+      } catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+          System.out.println("[App] Hilo principal interrumpido. Saliendo...");
+      }
+  }
+  ```
+  Esto permite que la aplicación se mantenga corriendo indefinidamente en contenedores Docker, pods de Kubernetes o desde la terminal con `mvn exec:java`, gestionando apagados limpios (*graceful shutdown*) al recibir `SIGINT` o `SIGTERM`.
+
+---
+
+## 8. Swagger-UI en JettraServerExample
+
+El proyecto de demostración web [`JettraServerExample`](file:///home/avbravo/NetBeansProjects/jettrastack_local/JettraServer/JettraServerExample) incorpora ahora Swagger-UI interactivo de forma nativa:
+- **Acceso:** Disponible en `http://localhost:8080/swagger-ui` y accesible desde el menú lateral de la interfaz PrimeFaces (`template.xhtml`).
+- **Controladores Documentados:** Descubre automáticamente las anotaciones de [`ProductResource`](file:///home/avbravo/NetBeansProjects/jettrastack_local/JettraServer/JettraServerExample/src/main/java/io/jettra/server/example/rest/ProductResource.java) y [`ServerInfoResource`](file:///home/avbravo/NetBeansProjects/jettrastack_local/JettraServer/JettraServerExample/src/main/java/io/jettra/server/example/rest/ServerInfoResource.java).
+- **Especificación OpenAPI 3.0.0:** Expuesta en `http://localhost:8080/openapi.json`.
+
+---
+
+## 9. Framework de Pruebas JettraTest
 
 Todo el ecosistema de JettraServer está verificado y garantizado bajo **JettraTest**, un framework de pruebas moderno para Java 25+ sin dependencias de JUnit ni frameworks pesados heredados.
 
 - **Anotaciones:** `@Test`, `@DisplayName`, `@BeforeAll`, `@AfterAll`.
 - **Aserciones:** `JettraAssert.assertEquals()`, `JettraAssert.assertTrue()`, `JettraAssert.assertNotNull()`.
-- **Ejecución Asíncrona con Virtual Threads:** Las pruebas se ejecutan en paralelo sobre hilos virtuales de Loom, completando suites enteras en menos de 3 segundos.
+- **Ejecución Asíncrona con Virtual Threads:** Las pruebas se ejecutan en paralelo sobre hilos virtuales de Loom, completando suites enteras en menos de 2 segundos.
 
 Para ejecutar toda la suite de pruebas del proyecto:
 ```bash
@@ -197,56 +260,79 @@ mvn clean test
 
 ---
 
-## 8. Configuración Exhaustiva (`jettraserver.config`) y Despliegue
+## 10. Configuración Estándar MicroProfile (`microprofile-config.properties`) y Despliegue
 
-La configuración de JettraServer es jerárquica y flexible:
-1. Parámetros de línea de comando (CLI)
+Para alinearse plenamente con **Jakarta EE 11** y **Eclipse MicroProfile 6.1 / MicroProfile Config 3.1**, JettraServer ha sustituido los archivos propietarios por el estándar de la industria `microprofile-config.properties`.
+
+La jerarquía de resolución de configuración estándar es la siguiente:
+1. Parámetros explícitos pasados por CLI (`--port`, `--mode`, `--host`)
 2. Propiedades de Sistema Java (`-Dprop=val`)
-3. Variables de Entorno (`JETTRA_SERVER_*`)
-4. Archivo `jettraserver.config` en el classpath o directorio de trabajo
+3. Variables de Entorno (`JETTRA_SERVER_*`, `MP_CONFIG_*`, `SERVER_*`)
+4. Archivo externo especificado mediante `-Dmicroprofile.config.file=...` o variable de entorno `MP_CONFIG_FILE`
+5. Archivo en el directorio de ejecución actual o subdirectorio: `./microprofile-config.properties`, `./META-INF/microprofile-config.properties`, `./config/microprofile-config.properties`
+6. Archivo estándar en el classpath: `META-INF/microprofile-config.properties`
 
-### 8.1. Archivo de Ejemplo: `jettraserver.config`
+### 10.1. Archivo Estándar `META-INF/microprofile-config.properties`
+Ubicado en el classpath de todos los módulos (`jettra-server-core`, `jettra-server-jakarta`, `JettraServerExample` y `JettraServerBackEndExample`):
 ```properties
 # ==============================================================================
-# JETTRASERVER ARCHIVO DE CONFIGURACIÓN MAESTRO (Java 25+ & Jakarta EE 11)
+# ECLIPSE MICROPROFILE CONFIGURATION (MicroProfile Config 3.1)
+# JettraServer - Jakarta EE 11 & Eclipse MicroProfile Native Platform
 # ==============================================================================
 
-# Configuración de Red
+# Perfil activo de configuración MicroProfile
+mp.config.profile=production
+
+# Configuración del Servidor y Red
 server.host=0.0.0.0
 server.port=8080
 server.backlog=1024
 contextpath=/
+server.contextpath=/
 
-# Concurrencia y Runtime
+# Concurrencia Project Loom (Java 25+ Virtual Threads)
 server.virtual-threads=true
 
 # Persistencia Tri-Modal: JVM_RAM, DISK_MEMORY, OFF_HEAP
 storage.mode=JVM_RAM
-storage.offheap.page-size=65536
+jettra.storage.mode=JVM_RAM
 data.dir=./data/jettra-server
+storage.offheap.page-size=65536
 
-# Base de Datos de Seguridad (JettraSecurityDB)
+# JettraSecurityDB (Base de datos embebida de seguridad)
 security.db.path=./data/jettra-server/securitydb
 
-# Seguridad y Tokens JWT
+# Jakarta Security & JWT Token Authority
 server.jwt.secret=jettra_server_super_secure_jwt_key_2026
+jwt.secret=jettra_server_super_secure_jwt_key_2026
 server.jwt.expiration=86400000
+jwt.expiration-millis=86400000
 
-# Integración CORS
+# Políticas de Origen Cruzado (CORS)
 cors.enabled=true
+
+# Telemetría y Salud MicroProfile
+mp.health.default.readiness.empty.response=UP
+mp.metrics.appName=JettraServer
+mp.metrics.tags=platform=JettraServer,runtime=Java25,engine=ProjectLoom
+mp.fault.tolerance.metrics.enabled=true
 ```
 
-### 8.2. Variables de Entorno Equivalentes
-- `JETTRA_SERVER_PORT`: Puerto de escucha del servidor HTTP.
-- `JETTRA_SERVER_HOST`: Interfaz de red de enlace (ej. `0.0.0.0` o `127.0.0.1`).
-- `JETTRA_SERVER_CONTEXT_PATH`: Context path base de la aplicación.
-- `JETTRA_STORAGE_MODE`: Modo de persistencia (`JVM_RAM`, `DISK_MEMORY`, `OFF_HEAP`).
-- `JETTRA_SECURITYDB_PATH`: Ruta base para los archivos de JettraSecurityDB.
-- `JETTRA_SERVER_JWT_SECRET`: Clave secreta para firma y validación de tokens Bearer JWT.
+### 10.2. Variables de Entorno Equivalentes
+- `JETTRA_SERVER_PORT` / `SERVER_PORT`: Puerto de escucha del servidor HTTP.
+- `JETTRA_SERVER_HOST` / `SERVER_HOST`: Interfaz de red de enlace (ej. `0.0.0.0` o `127.0.0.1`).
+- `JETTRA_SERVER_CONTEXT_PATH` / `SERVER_CONTEXTPATH`: Context path base de la aplicación.
+- `JETTRA_STORAGE_MODE` / `STORAGE_MODE`: Modo de persistencia (`JVM_RAM`, `DISK_MEMORY`, `OFF_HEAP`).
+- `JETTRA_SECURITYDB_PATH` / `SECURITY_DB_PATH`: Ruta base para los archivos de JettraSecurityDB.
+- `JETTRA_SERVER_JWT_SECRET` / `SERVER_JWT_SECRET`: Clave secreta para firma y validación de tokens Bearer JWT.
 
-### 8.3. Ejecución desde CLI
+### 10.3. Ejecución desde CLI
 ```bash
 java --enable-preview -jar JettraServerExample-1.0.0-SNAPSHOT.jar --port 8080 --mode JVM_RAM
 ```
-Al arrancar, el servidor imprime su banner informativo indicando los hilos virtuales activos, el modo de persistencia, la ruta de `JettraSecurityDB` y los endpoints habilitados.
+O para el backend de microservicios:
+```bash
+java --enable-preview -jar JettraServerBackEndExample-1.0.0-SNAPSHOT.jar
+```
+Al arrancar, el servidor imprime su banner informativo indicando los hilos virtuales activos, el modo de persistencia, la ruta de `JettraSecurityDB`, la URL interactiva de Swagger-UI (`/swagger-ui`) y los endpoints REST habilitados.
 

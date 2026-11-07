@@ -11,13 +11,18 @@ public class JettraConfig {
     }
 
     private static void loadProperties() {
-        try (InputStream input = JettraConfig.class.getClassLoader().getResourceAsStream("jettra-config.properties")) {
+        try (InputStream input = JettraConfig.class.getClassLoader().getResourceAsStream("META-INF/microprofile-config.properties")) {
             if (input != null) {
                 properties.load(input);
             }
-        } catch (Exception ex) {
-            ex.printStackTrace();
-        }
+        } catch (Exception ignored) {}
+
+        try (InputStream input = JettraConfig.class.getClassLoader().getResourceAsStream("microprofile-config.properties")) {
+            if (input != null) {
+                properties.load(input);
+            }
+        } catch (Exception ignored) {}
+
         AppRoleGenerator.generateFromProperties(properties);
         SystemRoleGenerator.generateFromProperties(properties);
     }

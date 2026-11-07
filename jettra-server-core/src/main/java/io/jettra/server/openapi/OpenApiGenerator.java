@@ -7,84 +7,101 @@ import io.jettra.server.openapi.annotations.Tag;
 import io.jettra.server.openapi.annotations.ApiResponse;
 import io.jettra.server.openapi.annotations.Operation;
 import io.jettra.server.openapi.annotations.OpenApi;
-import io.jettra.rest.annotations.POST;
-import io.jettra.rest.annotations.DELETE;
-import io.jettra.rest.annotations.GET;
-import io.jettra.rest.annotations.PathParam;
-import io.jettra.rest.annotations.HeaderParam;
-import io.jettra.rest.annotations.Path;
-import io.jettra.rest.annotations.QueryParam;
-import io.jettra.rest.annotations.PUT;
 import io.jettra.json.JettraJson;
 import io.jettra.json.JettraJsonBuilder;
 
+import java.lang.annotation.Annotation;
+import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.util.*;
 
+/**
+ * Generador automático de especificación OpenAPI 3.0.0.
+ * Compatible tanto con anotaciones nativas JettraRest como con especificaciones estándar Jakarta REST (JAX-RS).
+ */
 public class OpenApiGenerator {
 
     public static String generate(List<Class<?>> controllers) {
+        Map<String, Object> openapi = generateModel(controllers);
+        JettraJson gson = new JettraJsonBuilder().setPrettyPrinting().create();
+        return gson.toJson(openapi);
+    }
+
+    public static Map<String, Object> generateModel(List<Class<?>> controllers) {
         Map<String, Object> openapi = new LinkedHashMap<>();
         openapi.put("openapi", "3.0.0");
 
         Map<String, Object> info = new LinkedHashMap<>();
-        info.put("title", "Jettra API");
+        info.put("title", "JettraServer API");
         info.put("version", "1.0.0");
-        info.put("description", "Auto-generated OpenAPI documentation");
+        info.put("description", "Documentación interactiva de microservicios con seguridad JWT y JettraSecurityDB");
 
         openapi.put("info", info);
 
         Map<String, Object> paths = new LinkedHashMap<>();
 
-        for (Class<?> clazz : controllers) {
-            if (clazz.isAnnotationPresent(OpenApi.class)) {
-                OpenApi apiConfig = clazz.getAnnotation(OpenApi.class);
-                if (!apiConfig.title().isEmpty()) info.put("title", apiConfig.title());
-                if (!apiConfig.version().isEmpty()) info.put("version", apiConfig.version());
-                if (!apiConfig.description().isEmpty()) info.put("description", apiConfig.description());
-            }
+        if (controllers != null) {
+            for (Class<?> clazz : controllers) {
+                if (clazz == null) continue;
 
-            List<String> classTags = new ArrayList<>();
-            if (clazz.isAnnotationPresent(Tag.class)) {
-                Tag tag = clazz.getAnnotation(Tag.class);
-                classTags.add(tag.name());
-            } else if (clazz.isAnnotationPresent(Tags.class)) {
-                for (Tag t : clazz.getAnnotation(Tags.class).value()) {
-                    classTags.add(t.name());
+                if (clazz.isAnnotationPresent(OpenApi.class)) {
+                    OpenApi apiConfig = clazz.getAnnotation(OpenApi.class);
+                    if (!apiConfig.title().isEmpty()) info.put("title", apiConfig.title());
+                    if (!apiConfig.version().isEmpty()) info.put("version", apiConfig.version());
+                    if (!apiConfig.description().isEmpty()) info.put("description", apiConfig.description());
                 }
-            }
 
-            String basePath = "";
-            if (clazz.isAnnotationPresent(Path.class)) {
-                basePath = clazz.getAnnotation(Path.class).value();
-                if (!basePath.startsWith("/")) basePath = "/" + basePath;
-            }
+                List<String> classTags = new ArrayList<>();
+                if (clazz.isAnnotationPresent(Tag.class)) {
+                    Tag tag = clazz.getAnnotation(Tag.class);
+                    classTags.add(tag.name());
+                } else if (clazz.isAnnotationPresent(Tags.class)) {
+                    for (Tag t : clazz.getAnnotation(Tags.class).value()) {
+                        classTags.add(t.name());
+                    }
+                } else {
+                    classTags.add(clazz.getSimpleName().replace("Controller", "").replace("Resource", ""));
+                }
 
-            for (Method method : clazz.getDeclaredMethods()) {
-                String httpMethod = null;
-                if (method.isAnnotationPresent(GET.class)) httpMethod = "get";
-                else if (method.isAnnotationPresent(POST.class)) httpMethod = "post";
-                else if (method.isAnnotationPresent(PUT.class)) httpMethod = "put";
-                else if (method.isAnnotationPresent(DELETE.class)) httpMethod = "delete";
+                List<String> classRoles = getRolesAllowed(clazz);
 
-                if (httpMethod != null) {
+                String basePath = getPathValue(clazz);
+                if (basePath == null) basePath = "";
+                if (!basePath.isEmpty() && !basePath.startsWith("/")) basePath = "/" + basePath;
+
+                for (Method method : clazz.getDeclaredMethods()) {
+                    String httpMethod = getHttpMethod(method);
+                    if (httpMethod == null) continue;
+
                     String methodPath = basePath;
-                    if (method.isAnnotationPresent(Path.class)) {
-                        String mp = method.getAnnotation(Path.class).value();
+                    String mp = getPathValue(method);
+                    if (mp != null) {
                         if (!mp.startsWith("/")) mp = "/" + mp;
                         methodPath += mp;
                     }
+                    if (methodPath.isEmpty()) methodPath = "/";
 
                     Map<String, Object> pathItem = (Map<String, Object>) paths.computeIfAbsent(methodPath, k -> new LinkedHashMap<>());
                     Map<String, Object> operation = new LinkedHashMap<>();
-                    
+
+                    List<String> methodRoles = getRolesAllowed(method);
+                    List<String> effectiveRoles = methodRoles != null ? methodRoles : classRoles;
+
+                    if (effectiveRoles != null && !effectiveRoles.isEmpty()) {
+                        operation.put("x-roles-allowed", effectiveRoles);
+                    }
+
                     if (method.isAnnotationPresent(Operation.class)) {
                         Operation op = method.getAnnotation(Operation.class);
                         if (!op.summary().isEmpty()) operation.put("summary", op.summary());
                         if (!op.description().isEmpty()) operation.put("description", op.description());
                     } else {
-                        operation.put("summary", method.getName());
+                        String summary = method.getName();
+                        if (effectiveRoles != null && !effectiveRoles.isEmpty()) {
+                            summary += " [🔒 " + String.join(", ", effectiveRoles) + "]";
+                        }
+                        operation.put("summary", summary);
                     }
 
                     List<String> methodTags = new ArrayList<>(classTags);
@@ -98,17 +115,44 @@ public class OpenApiGenerator {
 
                     List<Map<String, Object>> parameters = new ArrayList<>();
                     for (Parameter p : method.getParameters()) {
-                        Map<String, Object> param = new LinkedHashMap<>();
-                        if (p.isAnnotationPresent(PathParam.class)) {
-                            param.put("name", p.getAnnotation(PathParam.class).value());
-                            param.put("in", "path");
-                            param.put("required", true);
-                        } else if (p.isAnnotationPresent(QueryParam.class)) {
-                            param.put("name", p.getAnnotation(QueryParam.class).value());
-                            param.put("in", "query");
-                        } else if (p.isAnnotationPresent(HeaderParam.class)) {
-                            param.put("name", p.getAnnotation(HeaderParam.class).value());
-                            param.put("in", "header");
+                        String paramIn = null;
+                        String paramName = null;
+
+                        for (Annotation a : p.getAnnotations()) {
+                            String aName = a.annotationType().getSimpleName();
+                            if ("PathParam".equals(aName)) {
+                                paramIn = "path";
+                                paramName = getAnnotationStringValue(a);
+                            } else if ("QueryParam".equals(aName)) {
+                                paramIn = "query";
+                                paramName = getAnnotationStringValue(a);
+                            } else if ("HeaderParam".equals(aName)) {
+                                paramIn = "header";
+                                paramName = getAnnotationStringValue(a);
+                            }
+                        }
+
+                        if (paramIn != null) {
+                            Map<String, Object> param = new LinkedHashMap<>();
+                            param.put("name", paramName != null ? paramName : p.getName());
+                            param.put("in", paramIn);
+                            param.put("required", "path".equals(paramIn));
+
+                            if (p.isAnnotationPresent(io.jettra.server.openapi.annotations.Parameter.class)) {
+                                var pAnnot = p.getAnnotation(io.jettra.server.openapi.annotations.Parameter.class);
+                                if (!pAnnot.description().isEmpty()) param.put("description", pAnnot.description());
+                                if (pAnnot.required()) param.put("required", true);
+                            }
+
+                            Map<String, Object> schema = new LinkedHashMap<>();
+                            schema.put("type", getJsonType(p.getType()));
+                            if (p.isAnnotationPresent(Schema.class)) {
+                                Schema s = p.getAnnotation(Schema.class);
+                                if (!s.description().isEmpty()) schema.put("description", s.description());
+                                if (!s.example().isEmpty()) schema.put("example", s.example());
+                            }
+                            param.put("schema", schema);
+                            parameters.add(param);
                         } else {
                             // Body parameter
                             Map<String, Object> requestBodyMap = new LinkedHashMap<>();
@@ -119,7 +163,7 @@ public class OpenApiGenerator {
                             } else {
                                 requestBodyMap.put("required", true);
                             }
-                                
+
                             Map<String, Object> content = new LinkedHashMap<>();
                             Map<String, Object> mediaType = new LinkedHashMap<>();
                             Map<String, Object> bodySchema = new LinkedHashMap<>();
@@ -132,29 +176,11 @@ public class OpenApiGenerator {
                             mediaType.put("schema", bodySchema);
                             content.put("application/json", mediaType);
                             requestBodyMap.put("content", content);
-                            
+
                             operation.put("requestBody", requestBodyMap);
-                            
-                            continue; // Ignored in parameters list
                         }
-
-                        if (p.isAnnotationPresent(io.jettra.server.openapi.annotations.Parameter.class)) {
-                            io.jettra.server.openapi.annotations.Parameter pAnnot = p.getAnnotation(io.jettra.server.openapi.annotations.Parameter.class);
-                            if (!pAnnot.description().isEmpty()) param.put("description", pAnnot.description());
-                            param.put("required", pAnnot.required() || "path".equals(param.get("in")));
-                        }
-
-                        Map<String, Object> schema = new LinkedHashMap<>();
-                        schema.put("type", "string");
-                        if (p.isAnnotationPresent(Schema.class)) {
-                            Schema s = p.getAnnotation(Schema.class);
-                            if (!s.description().isEmpty()) schema.put("description", s.description());
-                            if (!s.example().isEmpty()) schema.put("example", s.example());
-                        }
-                        param.put("schema", schema);
-
-                        parameters.add(param);
                     }
+
                     if (!parameters.isEmpty()) {
                         operation.put("parameters", parameters);
                     }
@@ -168,8 +194,16 @@ public class OpenApiGenerator {
                         }
                     } else {
                         Map<String, Object> defaultResp = new LinkedHashMap<>();
-                        defaultResp.put("description", "Successful operation");
+                        defaultResp.put("description", "Operación exitosa");
                         responses.put("200", defaultResp);
+                        if (effectiveRoles != null && !effectiveRoles.isEmpty()) {
+                            Map<String, Object> r401 = new LinkedHashMap<>();
+                            r401.put("description", "No autorizado (Requiere Bearer JWT)");
+                            responses.put("401", r401);
+                            Map<String, Object> r403 = new LinkedHashMap<>();
+                            r403.put("description", "Prohibido (Requiere roles: " + String.join(", ", effectiveRoles) + ")");
+                            responses.put("403", r403);
+                        }
                     }
                     operation.put("responses", responses);
 
@@ -186,6 +220,7 @@ public class OpenApiGenerator {
         bearerAuth.put("type", "http");
         bearerAuth.put("scheme", "bearer");
         bearerAuth.put("bearerFormat", "JWT");
+        bearerAuth.put("description", "Acreditación mediante JWT Bearer token emitido por JettraSecurityDB.");
         securitySchemes.put("bearerAuth", bearerAuth);
         components.put("securitySchemes", securitySchemes);
         openapi.put("components", components);
@@ -196,7 +231,58 @@ public class OpenApiGenerator {
         globalSecurity.add(req);
         openapi.put("security", globalSecurity);
 
-        JettraJson gson = new JettraJsonBuilder().setPrettyPrinting().create();
-        return gson.toJson(openapi);
+        return openapi;
+    }
+
+    private static String getPathValue(AnnotatedElement element) {
+        for (Annotation a : element.getAnnotations()) {
+            if ("Path".equals(a.annotationType().getSimpleName())) {
+                return getAnnotationStringValue(a);
+            }
+        }
+        return null;
+    }
+
+    private static String getHttpMethod(Method method) {
+        for (Annotation a : method.getAnnotations()) {
+            String name = a.annotationType().getSimpleName();
+            if ("GET".equals(name)) return "get";
+            if ("POST".equals(name)) return "post";
+            if ("PUT".equals(name)) return "put";
+            if ("DELETE".equals(name)) return "delete";
+            if ("PATCH".equals(name)) return "patch";
+        }
+        return null;
+    }
+
+    private static List<String> getRolesAllowed(AnnotatedElement element) {
+        for (Annotation a : element.getAnnotations()) {
+            if ("RolesAllowed".equals(a.annotationType().getSimpleName())) {
+                try {
+                    Object val = a.annotationType().getMethod("value").invoke(a);
+                    if (val instanceof String[] arr) {
+                        return Arrays.asList(arr);
+                    } else if (val instanceof String str) {
+                        return List.of(str);
+                    }
+                } catch (Exception ignored) {}
+            }
+        }
+        return null;
+    }
+
+    private static String getAnnotationStringValue(Annotation a) {
+        try {
+            Object val = a.annotationType().getMethod("value").invoke(a);
+            if (val != null) return val.toString();
+        } catch (Exception ignored) {}
+        return null;
+    }
+
+    private static String getJsonType(Class<?> type) {
+        if (type == int.class || type == Integer.class || type == long.class || type == Long.class) return "integer";
+        if (type == double.class || type == Double.class || type == float.class || type == Float.class) return "number";
+        if (type == boolean.class || type == Boolean.class) return "boolean";
+        return "string";
     }
 }
