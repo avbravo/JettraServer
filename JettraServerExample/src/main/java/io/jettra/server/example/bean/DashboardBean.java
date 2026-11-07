@@ -3,9 +3,9 @@ package io.jettra.server.example.bean;
 import io.jettra.server.core.storage.StorageMetrics;
 import io.jettra.server.core.storage.StorageMode;
 import io.jettra.server.example.service.ProductService;
-import io.jettra.server.jakarta.cdi.CdiAnnotations.Inject;
-import io.jettra.server.jakarta.cdi.CdiAnnotations.Named;
-import io.jettra.server.jakarta.cdi.CdiAnnotations.RequestScoped;
+import jakarta.enterprise.context.RequestScoped;
+import jakarta.inject.Inject;
+import jakarta.inject.Named;
 import java.io.Serializable;
 import java.lang.management.ManagementFactory;
 

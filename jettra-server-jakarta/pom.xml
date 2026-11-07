@@ -36,12 +36,42 @@
         </dependency>
         <dependency>
             <groupId>io.jettra</groupId>
-            <artifactId>JettraCDI</artifactId>
+            <artifactId>JettraReport</artifactId>
             <scope>provided</scope>
         </dependency>
+
+        <!-- Contenedor Oficial CDI 4.1 Jakarta EE (Weld SE) para Java 25 & Virtual Threads -->
         <dependency>
-            <groupId>io.jettra</groupId>
-            <artifactId>JettraReport</artifactId>
+            <groupId>org.jboss.weld.se</groupId>
+            <artifactId>weld-se-core</artifactId>
+            <version>6.0.0.Beta4</version>
+        </dependency>
+
+        <!-- Eclipse MicroProfile APIs & SmallRye Implementaciones Ligeras -->
+        <dependency>
+            <groupId>org.eclipse.microprofile.config</groupId>
+            <artifactId>microprofile-config-api</artifactId>
+            <version>3.1</version>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.microprofile.health</groupId>
+            <artifactId>microprofile-health-api</artifactId>
+            <version>4.0.1</version>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.microprofile.metrics</groupId>
+            <artifactId>microprofile-metrics-api</artifactId>
+            <version>5.1.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.microprofile.fault-tolerance</groupId>
+            <artifactId>microprofile-fault-tolerance-api</artifactId>
+            <version>4.1</version>
+        </dependency>
+        <dependency>
+            <groupId>io.smallrye.config</groupId>
+            <artifactId>smallrye-config</artifactId>
+            <version>3.15.1</version>
             <scope>provided</scope>
         </dependency>
 

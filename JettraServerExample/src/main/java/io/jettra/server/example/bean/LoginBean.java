@@ -2,9 +2,9 @@ package io.jettra.server.example.bean;
 
 import io.jettra.server.example.model.User;
 import io.jettra.server.example.service.SecurityService;
-import io.jettra.server.jakarta.cdi.CdiAnnotations.Inject;
-import io.jettra.server.jakarta.cdi.CdiAnnotations.Named;
-import io.jettra.server.jakarta.cdi.CdiAnnotations.SessionScoped;
+import jakarta.enterprise.context.SessionScoped;
+import jakarta.inject.Inject;
+import jakarta.inject.Named;
 import io.jettra.server.jakarta.validation.ValidationEngine;
 import io.jettra.server.jakarta.validation.ValidationEngine.NotNull;
 import io.jettra.server.jakarta.validation.ValidationEngine.Size;

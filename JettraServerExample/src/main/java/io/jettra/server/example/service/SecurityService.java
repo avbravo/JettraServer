@@ -1,11 +1,11 @@
 package io.jettra.server.example.service;
 
 import io.jettra.server.example.model.User;
-import io.jettra.server.jakarta.cdi.CdiAnnotations.ApplicationScoped;
-import io.jettra.server.jakarta.cdi.CdiAnnotations.Inject;
 import io.jettra.server.jakarta.persistence.EntityManager;
 import io.jettra.server.jakarta.persistence.EntityManagerFactory;
 import io.jettra.server.jakarta.transaction.TransactionAnnotations.Transactional;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 import java.util.Optional;
 
 /**

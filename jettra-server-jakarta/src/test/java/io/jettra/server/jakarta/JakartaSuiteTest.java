@@ -83,6 +83,24 @@ public class JakartaSuiteTest {
         public AuditService getAuditService() { return auditService; }
     }
 
+    public static class StandardCdiBean {
+        private boolean initialized = false;
+
+        @jakarta.annotation.PostConstruct
+        public void init() {
+            this.initialized = true;
+        }
+
+        public boolean isInitialized() { return initialized; }
+    }
+
+    public static class StandardConsumerBean {
+        @jakarta.inject.Inject
+        private StandardCdiBean standardBean;
+
+        public StandardCdiBean getStandardBean() { return standardBean; }
+    }
+
     // -------------------------------------------------------------
     // Recurso REST JAX-RS de prueba
     // -------------------------------------------------------------
@@ -293,5 +311,23 @@ public class JakartaSuiteTest {
 
         tm.commit();
         JettraAssert.assertEquals(JettraTransactionManager.STATUS_COMMITTED, tm.getStatus(), "Estado confirmado tras commit");
+    }
+
+    @Test
+    @DisplayName("Validar CDI con anotaciones oficiales jakarta.inject y jakarta.annotation")
+    public void testOfficialJakartaCdi() {
+        CdiContainer container = new CdiContainer();
+        StandardConsumerBean consumer = container.getBean(StandardConsumerBean.class);
+
+        JettraAssert.assertNotNull(consumer, "El consumidor CDI debe existir");
+        JettraAssert.assertNotNull(consumer.getStandardBean(), "El bean inyectado con jakarta.inject.Inject debe existir");
+        JettraAssert.assertTrue(consumer.getStandardBean().isInitialized(), "@PostConstruct de jakarta.annotation debe haberse ejecutado");
+    }
+
+    @Test
+    @DisplayName("Verificar compatibilidad con Eclipse MicroProfile Config API")
+    public void testMicroProfileConfigApi() {
+        org.eclipse.microprofile.config.Config config = org.eclipse.microprofile.config.ConfigProvider.getConfig();
+        JettraAssert.assertNotNull(config, "ConfigProvider debe resolver una instancia de Config");
     }
 }
