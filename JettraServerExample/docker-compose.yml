@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  jettraserver-example:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: jettra/server-example:1.0.0
+    container_name: jettraserver-example
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - SERVER_PORT=8080
+      - SERVER_HOST=0.0.0.0
+      - JETTRA_STORAGE_MODE=JVM_RAM
+      - JETTRA_SERVER_DATA_DIR=/app/data
+      - JAVA_OPTS=--enable-preview -XX:+UnlockExperimentalVMOptions -XX:+UseCompactObjectHeaders -XX:+UseContainerSupport -XX:+UseZGC -Xms256m -Xmx1g
+    volumes:
+      - jettraserver_example_data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 15s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+
+volumes:
+  jettraserver_example_data:
+    driver: local
+

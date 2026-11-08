@@ -108,6 +108,11 @@ public class App {
             ServerInfoResource.class
         ));
 
+        // Alias de conveniencia para Swagger-UI
+        server.get("/swagger", (req, res) -> res.header("Location", "/swagger-ui").status(302).body(""));
+        server.get("/docs", (req, res) -> res.header("Location", "/swagger-ui").status(302).body(""));
+        server.get("/api-docs", (req, res) -> res.header("Location", "/swagger-ui").status(302).body(""));
+
         // Iniciar el servidor
         try {
             server.start();

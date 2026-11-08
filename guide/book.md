@@ -16,6 +16,7 @@ Servidor de aplicaciones modular de ultra-alto rendimiento para **Java 25+**, co
 8. [Swagger-UI en JettraServerExample](#8-swagger-ui-en-jettraserverexample)
 9. [Framework de Pruebas JettraTest](#9-framework-de-pruebas-jettratest)
 10. [Configuración Estándar MicroProfile (`microprofile-config.properties`) y Despliegue](#10-configuración-estándar-microprofile-microprofile-configproperties-y-despliegue)
+11. [Contenedorización con Docker y Docker Compose (`bellsoft/liberica-runtime-container:jre-25-stream-musl`)](#11-contenedorización-con-docker-y-docker-compose-bellsoftliberica-runtime-containerjre-25-stream-musl)
 
 ---
 
@@ -328,11 +329,209 @@ mp.fault.tolerance.metrics.enabled=true
 
 ### 10.3. Ejecución desde CLI
 ```bash
-java --enable-preview -jar JettraServerExample-1.0.0-SNAPSHOT.jar --port 8080 --mode JVM_RAM
+java --enable-preview -jar JettraServerExample-1.0.0-SNAPSHOT-uber.jar --port 8080 --mode JVM_RAM
 ```
 O para el backend de microservicios:
 ```bash
-java --enable-preview -jar JettraServerBackEndExample-1.0.0-SNAPSHOT.jar
+java --enable-preview -jar JettraServerBackEndExample-1.0.0-SNAPSHOT-uber.jar --port 8083
 ```
 Al arrancar, el servidor imprime su banner informativo indicando los hilos virtuales activos, el modo de persistencia, la ruta de `JettraSecurityDB`, la URL interactiva de Swagger-UI (`/swagger-ui`) y los endpoints REST habilitados.
+
+---
+
+## 11. Contenedorización con Docker y Docker Compose (`bellsoft/liberica-runtime-container:jre-25-stream-musl`)
+
+Tanto [`JettraServerExample`](file:///home/avbravo/NetBeansProjects/jettrastack_local/JettraServer/JettraServerExample) como [`JettraServerBackEndExample`](file:///home/avbravo/NetBeansProjects/jettrastack_local/JettraServer/JettraServerBackEndExample) cuentan con soporte nativo de contenedorización de alto rendimiento basado en **Alpine Linux** con la biblioteca C estándar **musl** y el entorno de ejecución oficial **BellSoft Liberica JRE 25**.
+
+### 11.1. ¿Por qué `bellsoft/liberica-runtime-container:jre-25-stream-musl`?
+1. **Ultra-Bajo Consumo (Footprint Mínimo):** La imagen basada en musl reduce el tamaño base a menos de **90 MB**.
+2. **Soporte Completo de Java 25:** Integra las últimas características de **Project Loom** (Virtual Threads), **ZGC Generacional** y **JEP 450 (Compact Object Headers)**.
+3. **Optimización Cloud-Native:** Reconoce de forma nativa los límites de cgroups en Docker y Kubernetes (`-XX:+UseContainerSupport`).
+
+### 11.2. Empaquetado Autónomo (Fat JAR con `maven-shade-plugin`)
+Ambos proyectos configuran `maven-shade-plugin` en su `pom.xml` para generar un **Uber JAR** auto-contenido con todas las dependencias embebidas y un manifiesto ejecutable:
+```bash
+# Empaquetar artefactos autónomos
+mvn clean package -DskipTests
+```
+Se generan los archivos:
+- `target/JettraServerExample-1.0.0-SNAPSHOT-uber.jar` (Aplicación Web Jakarta EE + PrimeFaces + JettraFlux)
+- `target/JettraServerBackEndExample-1.0.0-SNAPSHOT-uber.jar` (Microservicios REST + Swagger-UI)
+
+### 11.3. Archivo `Dockerfile` para `JettraServerExample`
+Ubicado en [`JettraServerExample/Dockerfile`](file:///home/avbravo/NetBeansProjects/jettrastack_local/JettraServer/JettraServerExample/Dockerfile):
+```dockerfile
+# ==============================================================================
+# JettraServerExample - Jakarta EE 11, PrimeFaces 16 & JettraFlux
+# Java 25 & Project Loom sobre BellSoft Liberica Runtime Musl
+# ==============================================================================
+FROM bellsoft/liberica-runtime-container:jre-25-stream-musl
+LABEL maintainer="Jettra Ecosystem <dev@jettra.io>"
+LABEL description="JettraServerExample - Servidor Web Jakarta EE 11 y Reactivo en Java 25"
+
+# Instalar curl para healthchecks y certificados CA en Alpine/musl
+RUN if command -v apk > /dev/null; then \
+        apk add --no-cache curl ca-certificates tzdata && rm -rf /var/cache/apk/*; \
+    elif command -v apt-get > /dev/null; then \
+        apt-get update && apt-get install -y --no-install-recommends curl ca-certificates tzdata && rm -rf /var/lib/apt/lists/*; \
+    fi
+
+WORKDIR /app
+
+# Crear directorios para datos de seguridad y aplicación
+RUN mkdir -p /app/data /app/config && \
+    chown -R 1000:1000 /app
+
+# Copiar el Uber JAR generado por Maven
+COPY target/JettraServerExample-*-uber.jar /app/app.jar
+
+# Copiar archivo de configuración MicroProfile por defecto
+COPY src/main/resources/META-INF/microprofile-config.properties /app/config/microprofile-config.properties
+
+ENV SERVER_PORT=8080 \
+    SERVER_HOST=0.0.0.0 \
+    JETTRA_STORAGE_MODE=JVM_RAM \
+    JETTRA_SERVER_DATA_DIR=/app/data \
+    JAVA_OPTS="--enable-preview -XX:+UnlockExperimentalVMOptions -XX:+UseCompactObjectHeaders -XX:+UseContainerSupport -XX:+UseZGC -Xms256m -Xmx1g"
+
+EXPOSE 8080
+
+HEALTHCHECK --interval=15s --timeout=3s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost:8080/health || exit 1
+
+USER 1000:1000
+
+ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -jar /app/app.jar"]
+```
+
+### 11.4. Archivo `Dockerfile` para `JettraServerBackEndExample`
+Ubicado en [`JettraServerBackEndExample/Dockerfile`](file:///home/avbravo/NetBeansProjects/jettrastack_local/JettraServer/JettraServerBackEndExample/Dockerfile):
+```dockerfile
+# ==============================================================================
+# JettraServerBackEndExample - Microservicios Backend con Java 25 & Project Loom
+# Soporte nativo para Acreditación JWT, JettraSecurityDB y Swagger-UI JettraFlux
+# ==============================================================================
+FROM bellsoft/liberica-runtime-container:jre-25-stream-musl
+LABEL maintainer="Jettra Ecosystem <dev@jettra.io>"
+LABEL description="JettraServerBackEndExample - Microservicios Backend en Java 25 con Virtual Threads"
+
+RUN if command -v apk > /dev/null; then \
+        apk add --no-cache curl ca-certificates tzdata && rm -rf /var/cache/apk/*; \
+    elif command -v apt-get > /dev/null; then \
+        apt-get update && apt-get install -y --no-install-recommends curl ca-certificates tzdata && rm -rf /var/lib/apt/lists/*; \
+    fi
+
+WORKDIR /app
+
+RUN mkdir -p /app/data /app/config && \
+    chown -R 1000:1000 /app
+
+COPY target/JettraServerBackEndExample-*-uber.jar /app/app.jar
+COPY src/main/resources/META-INF/microprofile-config.properties /app/config/microprofile-config.properties
+
+ENV SERVER_PORT=8083 \
+    SERVER_HOST=0.0.0.0 \
+    JETTRA_STORAGE_MODE=JVM_RAM \
+    JETTRA_SERVER_DATA_DIR=/app/data \
+    JAVA_OPTS="--enable-preview -XX:+UnlockExperimentalVMOptions -XX:+UseCompactObjectHeaders -XX:+UseContainerSupport -XX:+UseZGC -Xms256m -Xmx1g"
+
+EXPOSE 8083
+
+HEALTHCHECK --interval=15s --timeout=3s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost:8083/api/v1/system/ping || exit 1
+
+USER 1000:1000
+
+ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -jar /app/app.jar"]
+```
+
+### 11.5. Orquestación con `docker-compose.yml`
+
+#### A) Despliegue de `JettraServerExample`
+Ubicado en [`JettraServerExample/docker-compose.yml`](file:///home/avbravo/NetBeansProjects/jettrastack_local/JettraServer/JettraServerExample/docker-compose.yml):
+```yaml
+version: '3.8'
+
+services:
+  jettraserver-example:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: jettra/server-example:1.0.0
+    container_name: jettraserver-example
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - SERVER_PORT=8080
+      - SERVER_HOST=0.0.0.0
+      - JETTRA_STORAGE_MODE=JVM_RAM
+      - JETTRA_SERVER_DATA_DIR=/app/data
+      - JAVA_OPTS=--enable-preview -XX:+UnlockExperimentalVMOptions -XX:+UseCompactObjectHeaders -XX:+UseContainerSupport -XX:+UseZGC -Xms256m -Xmx1g
+    volumes:
+      - jettraserver_example_data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 15s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+
+volumes:
+  jettraserver_example_data:
+    driver: local
+```
+
+#### B) Despliegue de `JettraServerBackEndExample`
+Ubicado en [`JettraServerBackEndExample/docker-compose.yml`](file:///home/avbravo/NetBeansProjects/jettrastack_local/JettraServer/JettraServerBackEndExample/docker-compose.yml):
+```yaml
+version: '3.8'
+
+services:
+  jettraserver-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: jettra/server-backend:1.0.0
+    container_name: jettraserver-backend
+    restart: unless-stopped
+    ports:
+      - "8083:8083"
+    environment:
+      - SERVER_PORT=8083
+      - SERVER_HOST=0.0.0.0
+      - JETTRA_STORAGE_MODE=JVM_RAM
+      - JETTRA_SERVER_DATA_DIR=/app/data
+      - JAVA_OPTS=--enable-preview -XX:+UnlockExperimentalVMOptions -XX:+UseCompactObjectHeaders -XX:+UseContainerSupport -XX:+UseZGC -Xms256m -Xmx1g
+    volumes:
+      - jettraserver_backend_data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8083/api/v1/system/ping"]
+      interval: 15s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+
+volumes:
+  jettraserver_backend_data:
+    driver: local
+```
+
+### 11.6. Comandos Operativos de Docker
+```bash
+# 1. Construir la imagen Docker localmente
+docker compose build
+
+# 2. Iniciar el servicio en segundo plano (daemon)
+docker compose up -d
+
+# 3. Consultar registros en tiempo real
+docker compose logs -f
+
+# 4. Verificar salud del contenedor
+docker compose ps
+
+# 5. Detener el servicio preservando volúmenes de datos
+docker compose down
+```
 
