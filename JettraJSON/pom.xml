@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+<parent>
+        <groupId>io.jettra</groupId>
+        <artifactId>JettraServer</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
+    <!-- 2. Identificador del Submódulo -->
+    <artifactId>JettraJSON</artifactId>
+    <packaging>jar</packaging>
+    <name>JettraJSON</name>
+    <description>Módulo JSON para el ecosistema Jettra</description>
+<!--    <groupId>io.jettra</groupId>
+    <artifactId>JettraJSON</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+
+    <properties>
+        <maven.compiler.source>25</maven.compiler.source>
+        <maven.compiler.target>25</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>-->
+
+    <dependencies>
+        <!-- Placeholder for JettraUI dependency since it must support it -->
+     
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.11.0</version>
+                <configuration>
+                    <source>${maven.compiler.source}</source>
+                    <target>${maven.compiler.target}</target>
+                </configuration>
+            </plugin>
+            
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>3.3.0</version>
+<!--                <configuration>
+                    <archive>
+                        <manifest>
+                            <mainClass>io.jettra.server.JettraServer</mainClass>
+                        </manifest>
+                    </archive>
+                </configuration>-->
+            </plugin>
+        </plugins>
+    </build>
+	<repositories>
+		<repository>
+		    <id>jitpack.io</id>
+		    <url>https://jitpack.io</url>
+		</repository>
+	</repositories>
+
+</project>

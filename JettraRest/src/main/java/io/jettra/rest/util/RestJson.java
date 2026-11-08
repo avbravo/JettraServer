@@ -1,0 +1,122 @@
+package io.jettra.rest.util;
+
+import io.jettra.jwt.JettraJson;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
+import java.util.HashMap;
+import java.util.Map;
+
+public class RestJson {
+
+    public static <T> T fromJson(String json, Class<T> clazz) {
+        if (json == null || json.trim().isEmpty()) return null;
+        try {
+            Map<String, Object> map = JettraJson.parse(json);
+            if (clazz.isRecord()) {
+                java.lang.reflect.RecordComponent[] components = clazz.getRecordComponents();
+                Class<?>[] parameterTypes = new Class<?>[components.length];
+                Object[] args = new Object[components.length];
+                
+                for (int i = 0; i < components.length; i++) {
+                    java.lang.reflect.RecordComponent rc = components[i];
+                    parameterTypes[i] = rc.getType();
+                    Object value = map.get(rc.getName());
+                    
+                    if (value != null && !rc.getType().isAssignableFrom(value.getClass())) {
+                        if (rc.getType() == String.class) {
+                            value = value.toString();
+                        } else if (rc.getType() == int.class || rc.getType() == Integer.class) {
+                            value = Integer.parseInt(value.toString());
+                        } else if (rc.getType() == long.class || rc.getType() == Long.class) {
+                            value = Long.parseLong(value.toString());
+                        } else if (rc.getType() == boolean.class || rc.getType() == Boolean.class) {
+                            value = Boolean.parseBoolean(value.toString());
+                        } else if (rc.getType() == double.class || rc.getType() == Double.class) {
+                            value = Double.parseDouble(value.toString());
+                        } else if (rc.getType() == float.class || rc.getType() == Float.class) {
+                            value = Float.parseFloat(value.toString());
+                        } else if (rc.getType() == java.util.UUID.class) {
+                            value = java.util.UUID.fromString(value.toString());
+                        }
+                    }
+                    args[i] = value;
+                }
+                java.lang.reflect.Constructor<T> constructor = clazz.getDeclaredConstructor(parameterTypes);
+                constructor.setAccessible(true);
+                return constructor.newInstance(args);
+            } else {
+                T instance = clazz.getDeclaredConstructor().newInstance();
+                for (Map.Entry<String, Object> entry : map.entrySet()) {
+                    try {
+                        Field field = clazz.getDeclaredField(entry.getKey());
+                        field.setAccessible(true);
+                        Object value = entry.getValue();
+                        if (value != null && !field.getType().isAssignableFrom(value.getClass())) {
+                            if (field.getType() == String.class) {
+                                value = value.toString();
+                            } else if (field.getType() == int.class || field.getType() == Integer.class) {
+                                value = Integer.parseInt(value.toString());
+                            } else if (field.getType() == long.class || field.getType() == Long.class) {
+                                value = Long.parseLong(value.toString());
+                            } else if (field.getType() == boolean.class || field.getType() == Boolean.class) {
+                                value = Boolean.parseBoolean(value.toString());
+                            } else if (field.getType() == double.class || field.getType() == Double.class) {
+                                value = Double.parseDouble(value.toString());
+                            } else if (field.getType() == float.class || field.getType() == Float.class) {
+                                value = Float.parseFloat(value.toString());
+                            } else if (field.getType() == java.util.UUID.class) {
+                                value = java.util.UUID.fromString(value.toString());
+                            }
+                        }
+                        field.set(instance, value);
+                    } catch (NoSuchFieldException e) {
+                        // ignore unknown fields
+                    }
+                }
+                return instance;
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    public static String toJson(Object obj) {
+        if (obj == null) return "null";
+        if (obj instanceof String) return "\"" + obj + "\"";
+        if (obj instanceof Number || obj instanceof Boolean) return obj.toString();
+        if (obj instanceof Map) {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> m = (Map<String, Object>) obj;
+            return JettraJson.toJson(m);
+        }
+        if (obj instanceof Iterable) {
+            java.util.StringJoiner sj = new java.util.StringJoiner(",", "[", "]");
+            for (Object item : (Iterable<?>) obj) {
+                sj.add(toJson(item));
+            }
+            return sj.toString();
+        }
+        try {
+            Map<String, Object> map = new HashMap<>();
+            if (obj.getClass().isRecord()) {
+                for (java.lang.reflect.RecordComponent rc : obj.getClass().getRecordComponents()) {
+                    rc.getAccessor().setAccessible(true);
+                    map.put(rc.getName(), rc.getAccessor().invoke(obj));
+                }
+            } else {
+                for (Field field : obj.getClass().getDeclaredFields()) {
+                    if (Modifier.isStatic(field.getModifiers()) || Modifier.isTransient(field.getModifiers())) {
+                        continue;
+                    }
+                    field.setAccessible(true);
+                    map.put(field.getName(), field.get(obj));
+                }
+            }
+            return JettraJson.toJson(map);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "{}";
+        }
+    }
+}

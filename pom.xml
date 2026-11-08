@@ -4,29 +4,47 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <parent>
-        <groupId>io.jettra</groupId>
-        <artifactId>jettraframeworkscontainers</artifactId>
-        <version>1.0.0-SNAPSHOT</version>
-        <relativePath>../jettraframeworkscontainers/pom.xml</relativePath>
-    </parent>
-
+    <groupId>io.jettra</groupId>
     <artifactId>JettraServer</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>JettraServer</name>
-    <description>Servidor de aplicaciones modular de ultra-alto rendimiento en Java 25 con soporte para todas las especificaciones Jakarta EE, persistencia triple modo y renderizado JettraFlux</description>
+    <description>Servidor de aplicaciones modular de ultra-alto rendimiento en Java 25 con soporte para especificaciones Jakarta EE, Eclipse MicroProfile, persistencia triple modo, renderizado JettraFlux y ecosistema completo de frameworks Jettra</description>
 
     <modules>
+        <!-- Ecosistema Base de Frameworks Jettra -->
+        <module>JettraAnnotation</module>
+        <module>JettraCollections</module>
+        <module>JettraTest</module>
+        <module>JettraJSON</module>
+        <module>JettraRules</module>
+        <module>JettraJWT</module>
+        <module>JettraCDI</module>
+        <module>JettraGRPC</module>
+        <module>JettraRest</module>
+        <module>JettraFlux</module>
+        <module>themes/Admin</module>
+        <module>themes/AdminLTE</module>
+        <module>themes/Metropolis</module>
+        <module>themes/Tail</module>
+        <module>themes/Traditional</module>
+        <module>JettraReport</module>
+        <module>JettraStudio</module>
+
+        <!-- Servidor Central JettraServer -->
         <module>jettra-server-core</module>
         <module>jettra-server-jakarta</module>
         <module>jettra-server-flux</module>
-        <module>JettraServerExample</module>
-        <module>JettraServerBackEndExample</module>
+
+        <!-- Módulo Agregador de Ejemplos -->
+        <module>JettraServerExamples</module>
     </modules>
 
     <properties>
         <maven.compiler.release>25</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <jettra.version>${project.version}</jettra.version>
+        <jettra.frameworks.version>${project.version}</jettra.frameworks.version>
         <jettra.memory.version>1.0-SNAPSHOT</jettra.memory.version>
         <jettra.offheap.version>1.0-SNAPSHOT</jettra.offheap.version>
         <jettra.report.version>1.0.0-SNAPSHOT</jettra.report.version>
@@ -34,6 +52,68 @@
 
     <dependencyManagement>
         <dependencies>
+            <!-- Módulos del Framework Jettra -->
+            <dependency>
+                <groupId>${project.groupId}</groupId>
+                <artifactId>JettraAnnotation</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>${project.groupId}</groupId>
+                <artifactId>JettraCollections</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>${project.groupId}</groupId>
+                <artifactId>JettraTest</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>${project.groupId}</groupId>
+                <artifactId>JettraJSON</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>${project.groupId}</groupId>
+                <artifactId>JettraRules</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>${project.groupId}</groupId>
+                <artifactId>JettraJWT</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>${project.groupId}</groupId>
+                <artifactId>JettraCDI</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>${project.groupId}</groupId>
+                <artifactId>JettraGRPC</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>${project.groupId}</groupId>
+                <artifactId>JettraRest</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>${project.groupId}</groupId>
+                <artifactId>JettraFlux</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>${project.groupId}</groupId>
+                <artifactId>JettraReport</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>${project.groupId}</groupId>
+                <artifactId>JettraStudio</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
             <!-- Módulos internos de JettraServer -->
             <dependency>
                 <groupId>io.jettra</groupId>
@@ -62,14 +142,6 @@
                 <artifactId>JettraStore-OffHeap</artifactId>
                 <version>${jettra.offheap.version}</version>
             </dependency>
-
-            <!-- Jettra Frameworks & Ecosistema -->
-            <dependency>
-                <groupId>io.jettra</groupId>
-                <artifactId>JettraReport</artifactId>
-                <version>${jettra.report.version}</version>
-                <scope>provided</scope>
-            </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -94,6 +166,11 @@
                     <configuration>
                         <argLine>--enable-preview --enable-native-access=ALL-UNNAMED -Xms128m -Xmx512m</argLine>
                     </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-install-plugin</artifactId>
+                    <version>3.1.1</version>
                 </plugin>
             </plugins>
         </pluginManagement>
