@@ -108,6 +108,9 @@ public class JettraSecurityService {
                 }
             }
         }
+        if (roleNames.isEmpty() && "admin".equalsIgnoreCase(username)) {
+            roleNames.add("ADMIN");
+        }
 
         JettraJWT jwt = new JettraJWT(jwtSecret, jwtExpirationMs);
         Map<String, Object> claims = new HashMap<>();

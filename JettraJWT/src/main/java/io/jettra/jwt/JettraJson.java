@@ -21,6 +21,27 @@ public class JettraJson {
         if (value == null) return "null";
         if (value instanceof String) return "\"" + escape((String) value) + "\"";
         if (value instanceof Number || value instanceof Boolean) return value.toString();
+        if (value instanceof java.util.Collection<?> col) {
+            StringJoiner sj = new StringJoiner(",", "[", "]");
+            for (Object item : col) {
+                sj.add(formatValue(item));
+            }
+            return sj.toString();
+        }
+        if (value instanceof Object[] arr) {
+            StringJoiner sj = new StringJoiner(",", "[", "]");
+            for (Object item : arr) {
+                sj.add(formatValue(item));
+            }
+            return sj.toString();
+        }
+        if (value instanceof Map<?, ?> m) {
+            StringJoiner sj = new StringJoiner(",", "{", "}");
+            for (Map.Entry<?, ?> e : m.entrySet()) {
+                sj.add("\"" + escape(String.valueOf(e.getKey())) + "\":" + formatValue(e.getValue()));
+            }
+            return sj.toString();
+        }
         return "\"" + escape(value.toString()) + "\"";
     }
 
@@ -45,6 +66,20 @@ public class JettraJson {
                         map.put(key, Boolean.parseBoolean(val));
                     } else if (val.matches("-?\\d+")) {
                         map.put(key, Long.parseLong(val));
+                    } else if (val.startsWith("[") && val.endsWith("]")) {
+                        String inner = val.substring(1, val.length() - 1).trim();
+                        java.util.List<Object> list = new java.util.ArrayList<>();
+                        if (!inner.isEmpty()) {
+                            for (String item : inner.split(",")) {
+                                item = item.trim();
+                                if (item.startsWith("\"") && item.endsWith("\"")) {
+                                    list.add(item.substring(1, item.length() - 1));
+                                } else if (!item.isEmpty()) {
+                                    list.add(item);
+                                }
+                            }
+                        }
+                        map.put(key, list);
                     } else {
                         map.put(key, val);
                     }

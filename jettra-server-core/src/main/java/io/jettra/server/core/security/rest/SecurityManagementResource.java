@@ -34,12 +34,52 @@ public class SecurityManagementResource {
         this.securityService = securityService;
     }
 
+    private Optional<JUser> checkAdminPrivileges(HttpRequest req, HttpResponse res) {
+        String authHeader = req.getHeader("Authorization");
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            res.status(401).json(Map.of(
+                    "error", "Acreditación requerida",
+                    "message", "Debe proveer un token Bearer en el encabezado 'Authorization' de un usuario con rol ADMIN",
+                    "status", 401
+            ));
+            return Optional.empty();
+        }
+
+        var userOpt = securityService.validateTokenAndGetUser(authHeader);
+        if (userOpt.isEmpty()) {
+            res.status(401).json(Map.of(
+                    "error", "Token inválido o expirado",
+                    "message", "El token JWT provisto no es válido o ha expirado.",
+                    "status", 401
+            ));
+            return Optional.empty();
+        }
+
+        JUser user = userOpt.get();
+        boolean isAdmin = (user.username() != null && "admin".equalsIgnoreCase(user.username()))
+                || (user.firstName() != null && "admin".equalsIgnoreCase(user.firstName()))
+                || (user.jRoles() != null && user.jRoles().stream()
+                .anyMatch(r -> "ADMIN".equalsIgnoreCase(r.name()) || "SECURITY_ADMIN".equalsIgnoreCase(r.name())));
+
+        if (!isAdmin) {
+            res.status(403).json(Map.of(
+                    "error", "Acceso denegado",
+                    "message", "El usuario '" + user.username() + "' no posee el rol ADMIN necesario para administrar usuarios y roles en JettraSecurityDB.",
+                    "status", 403
+            ));
+            return Optional.empty();
+        }
+
+        return Optional.of(user);
+    }
+
     @GET
     @Path("/users")
     @RolesAllowed({"ADMIN", "SECURITY_ADMIN"})
     @Operation(summary = "Listar todos los usuarios en JettraSecurityDB", description = "Retorna la lista completa de usuarios con sus roles y estados registrados.")
     @ApiResponse(responseCode = "200", description = "Lista de usuarios recuperada exitosamente")
     public void listUsers(HttpRequest req, HttpResponse res) {
+        if (checkAdminPrivileges(req, res).isEmpty()) return;
         var users = securityService.listUsers();
         var result = users.stream().map(u -> {
             Map<String, Object> map = new LinkedHashMap<>();
@@ -61,6 +101,7 @@ public class SecurityManagementResource {
     @ApiResponse(responseCode = "201", description = "Usuario registrado exitosamente")
     @ApiResponse(responseCode = "400", description = "Parámetros inválidos o usuario ya existente")
     public void createUser(HttpRequest req, HttpResponse res) {
+        if (checkAdminPrivileges(req, res).isEmpty()) return;
         Map<String, Object> body = parseBody(req);
         String username = getString(body, "username", req.getQueryParam("username"));
         String password = getString(body, "password", req.getQueryParam("password"));
@@ -116,13 +157,15 @@ public class SecurityManagementResource {
     @ApiResponse(responseCode = "200", description = "Usuario eliminado exitosamente")
     @ApiResponse(responseCode = "400", description = "Nombre de usuario requerido")
     public void deleteUser(HttpRequest req, HttpResponse res) {
+        if (checkAdminPrivileges(req, res).isEmpty()) return;
         Map<String, Object> body = parseBody(req);
         String username = getString(body, "username", req.getQueryParam("username"));
 
-        deleteUserByUsername(username, res);
+        deleteUserByUsername(username, req, res);
     }
 
-    public void deleteUserByUsername(String username, HttpResponse res) {
+    public void deleteUserByUsername(String username, HttpRequest req, HttpResponse res) {
+        if (checkAdminPrivileges(req, res).isEmpty()) return;
         if (username == null || username.isBlank()) {
             res.status(400).json(Map.of("error", "El parámetro 'username' es requerido"));
             return;
@@ -147,6 +190,7 @@ public class SecurityManagementResource {
     @Operation(summary = "Asignar o revocar rol a un usuario", description = "Añade o remueve un rol específico asignado al usuario en JettraSecurityDB.")
     @ApiResponse(responseCode = "200", description = "Rol actualizado exitosamente")
     public void updateRole(HttpRequest req, HttpResponse res) {
+        if (checkAdminPrivileges(req, res).isEmpty()) return;
         Map<String, Object> body = parseBody(req);
         String username = getString(body, "username", req.getQueryParam("username"));
         String role = getString(body, "role", req.getQueryParam("role"));
@@ -176,6 +220,7 @@ public class SecurityManagementResource {
     @Operation(summary = "Modificar estado de activación del usuario", description = "Habilita o deshabilita la cuenta de un usuario.")
     @ApiResponse(responseCode = "200", description = "Estado modificado exitosamente")
     public void updateStatus(HttpRequest req, HttpResponse res) {
+        if (checkAdminPrivileges(req, res).isEmpty()) return;
         Map<String, Object> body = parseBody(req);
         String username = getString(body, "username", req.getQueryParam("username"));
         Object activeObj = body.get("active");
@@ -208,6 +253,7 @@ public class SecurityManagementResource {
     @Operation(summary = "Actualizar contraseña de usuario", description = "Modifica la contraseña del usuario calculando su nuevo hash en JettraSecurityDB.")
     @ApiResponse(responseCode = "200", description = "Contraseña actualizada exitosamente")
     public void updatePassword(HttpRequest req, HttpResponse res) {
+        if (checkAdminPrivileges(req, res).isEmpty()) return;
         Map<String, Object> body = parseBody(req);
         String username = getString(body, "username", req.getQueryParam("username"));
         String newPassword = getString(body, "password", getString(body, "newPassword", req.getQueryParam("password")));
@@ -231,6 +277,7 @@ public class SecurityManagementResource {
     @Operation(summary = "Listar roles disponibles", description = "Retorna todos los roles definidos en la instancia de JettraSecurityDB.")
     @ApiResponse(responseCode = "200", description = "Lista de roles obtenida exitosamente")
     public void listRoles(HttpRequest req, HttpResponse res) {
+        if (checkAdminPrivileges(req, res).isEmpty()) return;
         var roles = securityService.listRoles().stream().map(r -> Map.of(
                 "id", r.id().toString(),
                 "name", r.name(),
@@ -245,6 +292,7 @@ public class SecurityManagementResource {
     @Operation(summary = "Registrar nuevo rol", description = "Crea un nuevo rol en JettraSecurityDB.")
     @ApiResponse(responseCode = "201", description = "Rol creado exitosamente")
     public void createRole(HttpRequest req, HttpResponse res) {
+        if (checkAdminPrivileges(req, res).isEmpty()) return;
         Map<String, Object> body = parseBody(req);
         String name = getString(body, "name", getString(body, "role", req.getQueryParam("name")));
 

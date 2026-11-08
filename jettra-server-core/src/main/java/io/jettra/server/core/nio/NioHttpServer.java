@@ -19,6 +19,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -148,8 +149,8 @@ public class NioHttpServer {
             HttpMethod method = HttpMethod.fromString(requestLine[0]);
             String rawUri = requestLine[1];
 
-            // Cabeceras
-            Map<String, String> headers = new HashMap<>();
+            // Cabeceras (Case-Insensitive para soportar estándares HTTP y navegadores)
+            Map<String, String> headers = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
             for (int i = 1; i < lines.length; i++) {
                 int colon = lines[i].indexOf(':');
                 if (colon > 0) {

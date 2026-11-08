@@ -210,20 +210,33 @@ El módulo [`jettra-server-flux`](file:///home/avbravo/NetBeansProjects/jettrast
 ### 6.1. Swagger-UI con Acreditación de Seguridad y Administración de JettraSecurityDB en JettraFlux
 El componente [`SwaggerFluxView`](file:///home/avbravo/NetBeansProjects/jettrastack_local/JettraServer/jettra-server-flux/src/main/java/io/jettra/server/flux/swagger/SwaggerFluxView.java) reemplaza a Swagger-UI JavaScript tradicional por una interfaz moderna, ultra-ligera y reactiva renderizada 100% con widgets de JettraFlux:
 
-- **Acreditación de Usuario en Vivo (JettraSecurityDB):**
-  - Panel superior interactivo que permite autenticarse con credenciales (`admin` / `admin`) o ingresar manualmente un token JWT Bearer existente.
-  - Detecta y muestra dinámicamente los roles concedidos (`ADMIN`, `MANAGER`, etc.) y el estado de la sesión (`🔒 No Acreditado` vs `🔓 Acreditado como: admin`).
-- **Administración Integral de Usuarios y Roles (JettraSecurityDB):**
-  - Sección visual interactiva conectada a las colecciones `juser`, `jrole` y `jcredential` de la instancia.
-  - **Tabla Dinámica de Usuarios:** Muestra en tiempo real todos los usuarios registrados, su correo electrónico, estado (`● Activo` / `○ Inactivo`), roles asignados (con botón de revocación directa `×`) y acciones de gestión.
-  - **Gestión de Credenciales y Estado:** Acciones inmediatas para asignar roles adicionales, cambiar contraseñas, alternar estado activo/inactivo y eliminar usuarios de `JettraSecurityDB`.
-  - **Formulario de Registro de Usuarios:** Creación rápida de usuarios con contraseña inicial, email y roles delimitados por comas.
-  - **Gestor de Roles del Sistema:** Registro y visualización en tiempo real de todos los roles reconocidos por el servidor.
+- **Diálogos de Mensajes 100% JettraFlux (Cero Popups Nativos JS):**
+  - Se eliminaron por completo las llamadas nativas del navegador (`alert()`, `confirm()`, `prompt()`).
+  - En su lugar se implementó un **Componente Modal Dialog JettraFlux** nativo (`#jettra-flux-dialog-backdrop`), con backdrop con desenfoque (`backdrop-filter: blur`), cabecera cromática, iconos semánticos, animaciones suaves y soporte para diálogos informativos, de confirmación y formularios interactivos (`prompt`) con navegación accesible por teclado (`Escape` / `Enter`).
+- **Flujo de Acreditación en Dos Fases (Login y Aplicación de Token):**
+  1. **"🔑 Iniciar Sesión y Acreditarse":**
+     - Toma las credenciales (`admin` / `admin`) y las valida contra el endpoint de autenticación `/api/auth/login`.
+     - Si la autenticación es exitosa, el servidor emite el JWT Token y la interfaz lo transfiere **de manera automática** al campo de texto de la sección **"Ingresar Token JWT Existente"** (`#jettra-manual-token`), notificando al usuario mediante un diálogo JettraFlux.
+  2. **"✓ Aplicar Token":**
+     - Al presionar este botón, el cliente verifica criptográficamente la estructura del JWT (3 segmentos Base64), decodifica el payload y valida la vigencia temporal (`exp`).
+     - Si el token es válido, se activa la sesión en `localStorage`, se ilumina el indicador de estado en verde (`🔓 Acreditado como: [usuario]`) y se habilitan para prueba interactiva todas las operaciones del catálogo (incluyendo el **Microservicio de Clientes**).
+- **Activación Exclusiva de Administración para Usuarios con Rol `ADMIN`:**
+  - La sección **"Administración de Usuarios y Roles (JettraSecurityDB)"** permanece **bloqueada por defecto**.
+  - **Validación Estricta:** Solo se activa y desbloquea visualmente cuando el usuario aplica un token JWT válido que contenga el rol **`ADMIN`** (o `SECURITY_ADMIN`).
+  - Si el usuario no está logeado o se acredita con una cuenta que no es `ADMIN` (ej. solo `USER` o `MANAGER`), la sección de administración permanece oculta y protegida con un mensaje explicativo y badge de acceso denegado.
+  - **Seguridad en Backend:** Los endpoints `/api/security/*` implementan inspección criptográfica del encabezado `Authorization: Bearer <token>`, rechazando con `401 Unauthorized` si no hay token o con `403 Forbidden` si el usuario no tiene rol `ADMIN`.
+- **Autenticación Obligatoria para Ejecución de Operaciones:**
+  - **Todas las operaciones REST de Swagger-UI requieren que el usuario se haya acreditado previamente y posea un JWT Token válido.**
+  - Si un usuario no acreditado pulsa "▶ Ejecutar Petición (Execute)" en cualquier microservicio (como *Microservicio de Clientes*), la ejecución se bloquea inmediatamente antes de enviar cualquier solicitud HTTP, desplegando un diálogo JettraFlux que notifica el bloqueo y ofrece un botón directo para desplazarse y enfocar el panel de acreditación.
+- **Panel Administrativo Activo (Solo para Administradores):**
+  - **Tabla Dinámica en Vivo:** Consulta en tiempo real las colecciones `juser`, `jrole` y `jcredential`, mostrando emails, estado (`● Activo` / `○ Inactivo`), roles concedidos y botón de revocación rápida `×`.
+  - **Acciones Directas mediante Diálogos JettraFlux:** Asignación de roles (`➕ Rol`), cambio de contraseñas (`🔑 Clave`), activación/desactivación de cuentas (`⚡`) y eliminación de usuarios (`🗑️`), todas gestionadas con modales JettraFlux.
+  - **Formularios de Alta:** Creación de usuarios con credenciales y registro de nuevos roles de sistema.
 - **Explorador Interactivo de Endpoints:**
   - Agrupación por tags temáticos y badges cromáticos por verbo HTTP (`GET` en azul, `POST` en verde, `PUT` en ámbar, `DELETE` en rojo).
   - Indicadores de seguridad por endpoint (`🔒 Requiere: [ADMIN]` vs `🌐 Público`).
   - Consola de prueba integrada ("Try it out"): formulario de parámetros de ruta (`PathParam`), consulta (`QueryParam`) y cuerpo JSON editable (`RequestBody`).
-  - Inyección automática del encabezado `Authorization: Bearer <token>` en todas las peticiones fetch de prueba cuando el usuario está acreditado.
+  - Inyección automática del encabezado `Authorization: Bearer <token>` en todas las peticiones fetch de prueba.
   - Medición de latencia en milisegundos y visor formateado con resaltado de la respuesta JSON.
 - **Habilitación en JettraServer:**
   ```java

@@ -186,7 +186,7 @@ public class JettraServer {
         router.post("/api/security/users", secResource::createUser);
         router.delete("/api/security/users", secResource::deleteUser);
         router.delete("/api/security/users/{username}", (req, res) -> {
-            secResource.deleteUserByUsername(req.getPathParam("username"), res);
+            secResource.deleteUserByUsername(req.getPathParam("username"), req, res);
         });
         router.post("/api/security/users/role", secResource::updateRole);
         router.post("/api/security/users/status", secResource::updateStatus);

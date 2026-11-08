@@ -130,7 +130,10 @@ public class SwaggerFluxView extends FluxView {
             }
         }
 
-        // 4. Script interactivo del cliente para Acreditación y Ejecución de Peticiones
+        // 4. Diálogo Modal Nativo JettraFlux (reemplaza alertas y confirmaciones nativas de navegador)
+        rootWidgets.add(buildModalDialog());
+
+        // 5. Script interactivo del cliente para Acreditación y Ejecución de Peticiones
         rootWidgets.add(buildClientScript());
 
         return Div.of(rootWidgets.toArray(new Widget[0]))
@@ -175,10 +178,10 @@ public class SwaggerFluxView extends FluxView {
                         <input id="jettra-manual-token" type="text" placeholder="Bearer eyJhbGci..." style="flex: 1; padding: 0.45rem 0.65rem; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.85rem; font-family: monospace;" />
                     </div>
                     <div style="display: flex; gap: 0.5rem;">
-                        <button onclick="jettraApplyManualToken()" style="flex: 2; background: #059669; color: #ffffff; border: none; border-radius: 6px; padding: 0.5rem; font-weight: 600; font-size: 0.85rem; cursor: pointer;">
+                        <button id="jettra-btn-apply-token" onclick="jettraApplyManualToken()" style="flex: 2; background: #059669; color: #ffffff; border: none; border-radius: 6px; padding: 0.5rem; font-weight: 600; font-size: 0.85rem; cursor: pointer; transition: background 0.2s;">
                             ✓ Aplicar Token
                         </button>
-                        <button onclick="jettraLogout()" style="flex: 1; background: #ef4444; color: #ffffff; border: none; border-radius: 6px; padding: 0.5rem; font-weight: 600; font-size: 0.85rem; cursor: pointer;">
+                        <button onclick="jettraLogout()" style="flex: 1; background: #ef4444; color: #ffffff; border: none; border-radius: 6px; padding: 0.5rem; font-weight: 600; font-size: 0.85rem; cursor: pointer; transition: background 0.2s;">
                             ✕ Limpiar
                         </button>
                     </div>
@@ -192,20 +195,21 @@ public class SwaggerFluxView extends FluxView {
 
     private Widget buildUserRoleManagementPanel() {
         String html = """
-            <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.25rem; margin-bottom: 2rem; box-shadow: 0 2px 8px rgba(0,0,0,0.03);">
+            <div id="jettra-sec-admin-container" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.25rem; margin-bottom: 2rem; box-shadow: 0 2px 8px rgba(0,0,0,0.03);">
                 <!-- Cabecera de la sección -->
                 <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; border-bottom: 2px solid #f1f5f9; padding-bottom: 0.8rem; margin-bottom: 1rem;">
                     <div>
-                        <div style="display: flex; align-items: center; gap: 0.6rem;">
+                        <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
                             <span style="font-size: 1.3rem;">👥</span>
                             <h3 style="margin: 0; font-size: 1.2rem; font-weight: 800; color: #0f172a;">Administración de Usuarios y Roles (JettraSecurityDB)</h3>
-                            <span id="jettra-users-count-badge" style="background: #e0f2fe; color: #0369a1; font-weight: 700; font-size: 0.75rem; padding: 0.2rem 0.6rem; border-radius: 9999px;">0 Usuarios</span>
+                            <span id="jettra-admin-lock-badge" style="background: #fee2e2; color: #dc2626; font-weight: 700; font-size: 0.75rem; padding: 0.2rem 0.6rem; border-radius: 9999px;">🔒 Requiere Rol ADMIN</span>
+                            <span id="jettra-users-count-badge" style="display: none; background: #e0f2fe; color: #0369a1; font-weight: 700; font-size: 0.75rem; padding: 0.2rem 0.6rem; border-radius: 9999px;">0 Usuarios</span>
                         </div>
                         <p style="margin: 0.3rem 0 0 0; font-size: 0.85rem; color: #64748b;">
                             Gestión interactiva en tiempo real sobre las colecciones <code>juser</code>, <code>jrole</code> y <code>jcredential</code> almacenadas en la base de datos embebida de esta instancia.
                         </p>
                     </div>
-                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                    <div id="jettra-admin-header-actions" style="display: none; gap: 0.5rem; align-items: center;">
                         <button onclick="jettraLoadUsers()" style="background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; border-radius: 6px; padding: 0.45rem 0.9rem; font-weight: 600; font-size: 0.82rem; cursor: pointer; display: flex; align-items: center; gap: 0.35rem; transition: all 0.2s;">
                             🔄 Refrescar
                         </button>
@@ -215,63 +219,74 @@ public class SwaggerFluxView extends FluxView {
                     </div>
                 </div>
 
-                <!-- Contenido colapsable -->
-                <div id="jettra-sec-admin-content" style="display: block;">
-                    <!-- Notificación de estado -->
-                    <div id="jettra-sec-notification" style="display: none; padding: 0.6rem 0.9rem; border-radius: 6px; font-size: 0.85rem; margin-bottom: 1rem;"></div>
-
-                    <!-- Tabla de usuarios interactiva -->
-                    <div style="overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 1.5rem; background: #fafafa;">
-                        <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.85rem;">
-                            <thead style="background: #f1f5f9; color: #475569; font-weight: 700;">
-                                <tr>
-                                    <th style="padding: 0.65rem 0.9rem; border-bottom: 1px solid #e2e8f0;">Usuario</th>
-                                    <th style="padding: 0.65rem 0.9rem; border-bottom: 1px solid #e2e8f0;">Email</th>
-                                    <th style="padding: 0.65rem 0.9rem; border-bottom: 1px solid #e2e8f0;">Estado</th>
-                                    <th style="padding: 0.65rem 0.9rem; border-bottom: 1px solid #e2e8f0;">Roles Asignados</th>
-                                    <th style="padding: 0.65rem 0.9rem; border-bottom: 1px solid #e2e8f0; text-align: center;">Acciones de Gestión</th>
-                                </tr>
-                            </thead>
-                            <tbody id="jettra-users-tbody">
-                                <tr><td colspan="5" style="padding: 1.5rem; text-align: center; color: #94a3b8;">Cargando usuarios de JettraSecurityDB...</td></tr>
-                            </tbody>
-                        </table>
+                <!-- Mensaje de bloqueo cuando no está acreditado como ADMIN -->
+                <div id="jettra-sec-admin-locked-msg" style="display: flex; align-items: center; gap: 0.8rem; background: #fffbeb; border: 1px solid #fef3c7; border-radius: 8px; padding: 1rem; color: #92400e; font-size: 0.88rem;">
+                    <span style="font-size: 1.5rem;">🔒</span>
+                    <div>
+                        <strong id="jettra-sec-locked-title" style="display: block; font-size: 0.92rem; color: #78350f;">Sección protegida con rol ADMIN</strong>
+                        <span id="jettra-sec-locked-desc">Para administrar usuarios y roles en JettraSecurityDB, primero debe iniciar sesión en el <b>Panel de Acreditación de Usuario</b> con una cuenta que posea el rol <b>ADMIN</b> (ej. <code>admin</code> / <code>admin</code>).</span>
                     </div>
+                </div>
 
-                    <!-- Formularios de Creación (Usuarios y Roles) en Grid -->
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.25rem;">
-                        <!-- Form Crear Usuario -->
-                        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1rem;">
-                            <div style="font-weight: 700; font-size: 0.9rem; color: #1e293b; margin-bottom: 0.6rem; display: flex; align-items: center; gap: 0.4rem;">
-                                <span>➕</span> Registrar Nuevo Usuario en JettraSecurityDB
-                            </div>
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 0.5rem;">
-                                <input id="jettra-new-user" type="text" placeholder="Usuario (ej. operario)" style="padding: 0.45rem 0.6rem; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.82rem;" />
-                                <input id="jettra-new-pass" type="password" placeholder="Contraseña" style="padding: 0.45rem 0.6rem; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.82rem;" />
-                            </div>
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 0.6rem;">
-                                <input id="jettra-new-email" type="email" placeholder="Email (ej. op@jettra.io)" style="padding: 0.45rem 0.6rem; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.82rem;" />
-                                <input id="jettra-new-roles" type="text" placeholder="Roles (ej. USER, MANAGER)" value="USER" style="padding: 0.45rem 0.6rem; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.82rem;" />
-                            </div>
-                            <button onclick="jettraCreateUser()" style="width: 100%; background: #2563eb; color: #ffffff; border: none; border-radius: 6px; padding: 0.5rem; font-weight: 700; font-size: 0.83rem; cursor: pointer; transition: background 0.2s;">
-                                💾 Guardar Usuario
-                            </button>
+                <!-- Contenido administrativo activo (solo visible para rol ADMIN) -->
+                <div id="jettra-sec-admin-wrapper" style="display: none;">
+                    <div id="jettra-sec-admin-content" style="display: block;">
+                        <!-- Notificación de estado -->
+                        <div id="jettra-sec-notification" style="display: none; padding: 0.6rem 0.9rem; border-radius: 6px; font-size: 0.85rem; margin-bottom: 1rem;"></div>
+
+                        <!-- Tabla de usuarios interactiva -->
+                        <div style="overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 1.5rem; background: #fafafa;">
+                            <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.85rem;">
+                                <thead style="background: #f1f5f9; color: #475569; font-weight: 700;">
+                                    <tr>
+                                        <th style="padding: 0.65rem 0.9rem; border-bottom: 1px solid #e2e8f0;">Usuario</th>
+                                        <th style="padding: 0.65rem 0.9rem; border-bottom: 1px solid #e2e8f0;">Email</th>
+                                        <th style="padding: 0.65rem 0.9rem; border-bottom: 1px solid #e2e8f0;">Estado</th>
+                                        <th style="padding: 0.65rem 0.9rem; border-bottom: 1px solid #e2e8f0;">Roles Asignados</th>
+                                        <th style="padding: 0.65rem 0.9rem; border-bottom: 1px solid #e2e8f0; text-align: center;">Acciones de Gestión</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="jettra-users-tbody">
+                                    <tr><td colspan="5" style="padding: 1.5rem; text-align: center; color: #94a3b8;">Cargando usuarios de JettraSecurityDB...</td></tr>
+                                </tbody>
+                            </table>
                         </div>
 
-                        <!-- Form Crear Roles y Catálogo -->
-                        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1rem;">
-                            <div style="font-weight: 700; font-size: 0.9rem; color: #1e293b; margin-bottom: 0.6rem; display: flex; align-items: center; gap: 0.4rem;">
-                                <span>🛡️</span> Roles del Sistema (JettraSecurityDB)
-                            </div>
-                            <div style="display: flex; gap: 0.5rem; margin-bottom: 0.75rem;">
-                                <input id="jettra-new-role-input" type="text" placeholder="Nuevo rol (ej. AUDITOR)" style="flex: 1; padding: 0.45rem 0.6rem; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.82rem; text-transform: uppercase;" />
-                                <button onclick="jettraCreateRole()" style="background: #0d9488; color: #ffffff; border: none; border-radius: 6px; padding: 0.45rem 0.8rem; font-weight: 700; font-size: 0.82rem; cursor: pointer;">
-                                    ➕ Crear Rol
+                        <!-- Formularios de Creación (Usuarios y Roles) en Grid -->
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.25rem;">
+                            <!-- Form Crear Usuario -->
+                            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1rem;">
+                                <div style="font-weight: 700; font-size: 0.9rem; color: #1e293b; margin-bottom: 0.6rem; display: flex; align-items: center; gap: 0.4rem;">
+                                    <span>➕</span> Registrar Nuevo Usuario en JettraSecurityDB
+                                </div>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 0.5rem;">
+                                    <input id="jettra-new-user" type="text" placeholder="Usuario (ej. operario)" style="padding: 0.45rem 0.6rem; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.82rem;" />
+                                    <input id="jettra-new-pass" type="password" placeholder="Contraseña" style="padding: 0.45rem 0.6rem; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.82rem;" />
+                                </div>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 0.6rem;">
+                                    <input id="jettra-new-email" type="email" placeholder="Email (ej. op@jettra.io)" style="padding: 0.45rem 0.6rem; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.82rem;" />
+                                    <input id="jettra-new-roles" type="text" placeholder="Roles (ej. USER, MANAGER)" value="USER" style="padding: 0.45rem 0.6rem; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.82rem;" />
+                                </div>
+                                <button onclick="jettraCreateUser()" style="width: 100%; background: #2563eb; color: #ffffff; border: none; border-radius: 6px; padding: 0.5rem; font-weight: 700; font-size: 0.83rem; cursor: pointer; transition: background 0.2s;">
+                                    💾 Guardar Usuario
                                 </button>
                             </div>
-                            <div style="font-size: 0.8rem; font-weight: 600; color: #475569; margin-bottom: 0.4rem;">Roles Registrados en la Instancia:</div>
-                            <div id="jettra-roles-pills-container" style="display: flex; flex-wrap: wrap; gap: 0.4rem; min-height: 28px;">
-                                <span style="color: #94a3b8; font-size: 0.8rem;">Cargando roles...</span>
+
+                            <!-- Form Crear Roles y Catálogo -->
+                            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1rem;">
+                                <div style="font-weight: 700; font-size: 0.9rem; color: #1e293b; margin-bottom: 0.6rem; display: flex; align-items: center; gap: 0.4rem;">
+                                    <span>🛡️</span> Roles del Sistema (JettraSecurityDB)
+                                </div>
+                                <div style="display: flex; gap: 0.5rem; margin-bottom: 0.75rem;">
+                                    <input id="jettra-new-role-input" type="text" placeholder="Nuevo rol (ej. AUDITOR)" style="flex: 1; padding: 0.45rem 0.6rem; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.82rem; text-transform: uppercase;" />
+                                    <button onclick="jettraCreateRole()" style="background: #0d9488; color: #ffffff; border: none; border-radius: 6px; padding: 0.45rem 0.8rem; font-weight: 700; font-size: 0.82rem; cursor: pointer;">
+                                        ➕ Crear Rol
+                                    </button>
+                                </div>
+                                <div style="font-size: 0.8rem; font-weight: 600; color: #475569; margin-bottom: 0.4rem;">Roles Registrados en la Instancia:</div>
+                                <div id="jettra-roles-pills-container" style="display: flex; flex-wrap: wrap; gap: 0.4rem; min-height: 28px;">
+                                    <span style="color: #94a3b8; font-size: 0.8rem;">Cargando roles...</span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -393,93 +408,459 @@ public class SwaggerFluxView extends FluxView {
         return RawHtml.of(rawContent);
     }
 
+    private Widget buildModalDialog() {
+        String html = """
+            <!-- Diálogo Modal JettraFlux (Cero Popups Nativos JS) -->
+            <div id="jettra-flux-dialog-backdrop" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.65); backdrop-filter: blur(4px); z-index: 999999; justify-content: center; align-items: center; padding: 1rem; box-sizing: border-box;">
+                <div id="jettra-flux-dialog-card" style="background: #ffffff; border-radius: 12px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.25), 0 10px 10px -5px rgba(0, 0, 0, 0.1); width: 100%; max-width: 490px; overflow: hidden; border: 1px solid #e2e8f0; font-family: inherit;">
+                    <!-- Cabecera del Diálogo JettraFlux -->
+                    <div style="display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.25rem; border-bottom: 1px solid #f1f5f9; background: #f8fafc;">
+                        <div style="display: flex; align-items: center; gap: 0.6rem;">
+                            <span id="jettra-dialog-icon" style="font-size: 1.3rem;">ℹ️</span>
+                            <h4 id="jettra-dialog-title" style="margin: 0; font-size: 1.05rem; font-weight: 700; color: #0f172a;">Aviso del Sistema</h4>
+                        </div>
+                        <button type="button" onclick="jettraCloseDialog()" style="background: transparent; border: none; color: #94a3b8; font-size: 1.25rem; cursor: pointer; font-weight: bold; padding: 0.2rem 0.4rem; border-radius: 4px; line-height: 1;">✕</button>
+                    </div>
+                    <!-- Cuerpo del Diálogo JettraFlux -->
+                    <div style="padding: 1.25rem;">
+                        <div id="jettra-dialog-message" style="margin: 0; font-size: 0.92rem; color: #334155; line-height: 1.55;"></div>
+                        <div id="jettra-dialog-input-container" style="display: none; margin-top: 1rem;">
+                            <input type="text" id="jettra-dialog-input" style="width: 100%; box-sizing: border-box; padding: 0.55rem 0.75rem; border: 1.5px solid #cbd5e1; border-radius: 6px; font-size: 0.88rem; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='#2563eb'" onblur="this.style.borderColor='#cbd5e1'" />
+                        </div>
+                    </div>
+                    <!-- Pie con Acciones -->
+                    <div style="display: flex; justify-content: flex-end; gap: 0.6rem; padding: 0.85rem 1.25rem; background: #f8fafc; border-top: 1px solid #f1f5f9;">
+                        <button id="jettra-dialog-cancel-btn" type="button" onclick="jettraDialogCancelAction()" style="display: none; background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; border-radius: 6px; padding: 0.48rem 1rem; font-weight: 600; font-size: 0.85rem; cursor: pointer; transition: background 0.2s;">Cancelar</button>
+                        <button id="jettra-dialog-confirm-btn" type="button" onclick="jettraDialogConfirmAction()" style="background: #2563eb; color: #ffffff; border: none; border-radius: 6px; padding: 0.48rem 1.2rem; font-weight: 700; font-size: 0.85rem; cursor: pointer; transition: background 0.2s;">Aceptar</button>
+                    </div>
+                </div>
+            </div>
+            """;
+        return RawHtml.of(html);
+    }
+
     private Widget buildClientScript() {
         String script = """
             <script>
             (function() {
+                // =========================================================================
+                // Componente Dialog JettraFlux (Sustituto nativo de alert, confirm y prompt)
+                // =========================================================================
+                let jettraDialogCallback = null;
+                let jettraDialogCancelCallback = null;
+
+                window.jettraShowDialog = function(options) {
+                    const backdrop = document.getElementById('jettra-flux-dialog-backdrop');
+                    const titleEl = document.getElementById('jettra-dialog-title');
+                    const iconEl = document.getElementById('jettra-dialog-icon');
+                    const msgEl = document.getElementById('jettra-dialog-message');
+                    const inputContainer = document.getElementById('jettra-dialog-input-container');
+                    const inputEl = document.getElementById('jettra-dialog-input');
+                    const cancelBtn = document.getElementById('jettra-dialog-cancel-btn');
+                    const confirmBtn = document.getElementById('jettra-dialog-confirm-btn');
+
+                    if (!backdrop) return;
+
+                    titleEl.innerText = options.title || 'Aviso del Sistema';
+                    iconEl.innerText = options.icon || (options.type === 'error' ? '❌' : (options.type === 'success' ? '✅' : (options.type === 'confirm' ? '❓' : (options.type === 'prompt' ? '✏️' : 'ℹ️'))));
+                    msgEl.innerHTML = options.message || '';
+
+                    jettraDialogCallback = options.onConfirm || null;
+                    jettraDialogCancelCallback = options.onCancel || null;
+
+                    confirmBtn.innerText = options.confirmText || 'Aceptar';
+                    confirmBtn.style.background = options.confirmColor || '#2563eb';
+
+                    if (options.type === 'confirm' || options.type === 'prompt') {
+                        cancelBtn.style.display = 'inline-block';
+                        cancelBtn.innerText = options.cancelText || 'Cancelar';
+                    } else {
+                        cancelBtn.style.display = 'none';
+                    }
+
+                    if (options.type === 'prompt') {
+                        inputContainer.style.display = 'block';
+                        inputEl.placeholder = options.placeholder || '';
+                        inputEl.value = options.inputValue || '';
+                        setTimeout(() => { inputEl.focus(); inputEl.select(); }, 60);
+                    } else {
+                        inputContainer.style.display = 'none';
+                    }
+
+                    backdrop.style.display = 'flex';
+                };
+
+                window.jettraCloseDialog = function() {
+                    const backdrop = document.getElementById('jettra-flux-dialog-backdrop');
+                    if (backdrop) backdrop.style.display = 'none';
+                    jettraDialogCallback = null;
+                    jettraDialogCancelCallback = null;
+                };
+
+                window.jettraDialogConfirmAction = function() {
+                    const inputEl = document.getElementById('jettra-dialog-input');
+                    const val = inputEl ? inputEl.value : '';
+                    const cb = jettraDialogCallback;
+                    jettraCloseDialog();
+                    if (cb) cb(val);
+                };
+
+                window.jettraDialogCancelAction = function() {
+                    const cb = jettraDialogCancelCallback;
+                    jettraCloseDialog();
+                    if (cb) cb();
+                };
+
+                document.addEventListener('keydown', function(e) {
+                    const backdrop = document.getElementById('jettra-flux-dialog-backdrop');
+                    if (!backdrop || backdrop.style.display !== 'flex') return;
+                    if (e.key === 'Escape') {
+                        jettraDialogCancelAction();
+                    } else if (e.key === 'Enter') {
+                        const inputContainer = document.getElementById('jettra-dialog-input-container');
+                        if (inputContainer && inputContainer.style.display !== 'none') {
+                            e.preventDefault();
+                            jettraDialogConfirmAction();
+                        }
+                    }
+                });
+
+                // =========================================================================
+                // Gestión de Estado de Seguridad y Acreditación JWT (JettraSecurityDB)
+                // =========================================================================
+                function parseJwtPayload(token) {
+                    if (!token) return null;
+                    try {
+                        const parts = token.split('.');
+                        if (parts.length !== 3) return null;
+                        let b64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+                        while (b64.length % 4) { b64 += '='; }
+                        try {
+                            return JSON.parse(decodeURIComponent(escape(atob(b64))));
+                        } catch(e) {
+                            return JSON.parse(atob(b64));
+                        }
+                    } catch(err) {
+                        return null;
+                    }
+                }
+
+                function extractRoles(payload) {
+                    if (!payload) return [];
+                    const raw = payload.roles !== undefined ? payload.roles : (payload.groups !== undefined ? payload.groups : payload.role);
+                    if (!raw) return [];
+                    let res = [];
+                    if (Array.isArray(raw)) {
+                        raw.forEach(item => {
+                            if (typeof item === 'string') {
+                                res.push(item.trim());
+                            } else if (item && typeof item === 'object' && item.name) {
+                                res.push(String(item.name).trim());
+                            } else if (item !== null && item !== undefined) {
+                                res.push(String(item).trim());
+                            }
+                        });
+                    } else if (typeof raw === 'string') {
+                        let clean = raw.trim();
+                        if (clean.startsWith('[') && clean.endsWith(']')) {
+                            clean = clean.substring(1, clean.length - 1);
+                        }
+                        clean.split(',').forEach(s => {
+                            let part = s.trim().replace(/^["']|["']$/g, '');
+                            if (part) res.push(part);
+                        });
+                    }
+                    return res;
+                }
+
                 function refreshAuthStatus() {
                     const token = localStorage.getItem('jettra_jwt_token');
                     const statusText = document.getElementById('jettra-auth-status-text');
                     const indicator = document.getElementById('jettra-auth-indicator');
                     const rolesBox = document.getElementById('jettra-auth-roles-box');
                     const manualInput = document.getElementById('jettra-manual-token');
+                    const adminBadge = document.getElementById('jettra-admin-lock-badge');
+                    const adminLockedMsg = document.getElementById('jettra-sec-admin-locked-msg');
+                    const adminWrapper = document.getElementById('jettra-sec-admin-wrapper');
+                    const adminActions = document.getElementById('jettra-admin-header-actions');
+                    const countBadge = document.getElementById('jettra-users-count-badge');
+                    const lockedTitle = document.getElementById('jettra-sec-locked-title');
+                    const lockedDesc = document.getElementById('jettra-sec-locked-desc');
 
                     if (!token) {
-                        indicator.style.background = '#94a3b8';
-                        statusText.innerText = 'Estado: No Acreditado (Peticiones Anónimas)';
-                        statusText.style.color = '#334155';
-                        rolesBox.innerHTML = '';
-                        if (manualInput) manualInput.value = '';
+                        if (indicator) indicator.style.background = '#94a3b8';
+                        if (statusText) {
+                            statusText.innerText = 'Estado: No Acreditado (Peticiones Bloqueadas)';
+                            statusText.style.color = '#334155';
+                        }
+                        if (rolesBox) rolesBox.innerHTML = '';
+                        if (manualInput) {
+                            manualInput.style.borderColor = '#cbd5e1';
+                            manualInput.style.background = '#ffffff';
+                        }
+
+                        // Bloquear sección administrativa
+                        if (adminWrapper) adminWrapper.style.display = 'none';
+                        if (adminLockedMsg) adminLockedMsg.style.display = 'flex';
+                        if (adminActions) adminActions.style.display = 'none';
+                        if (countBadge) countBadge.style.display = 'none';
+                        if (adminBadge) {
+                            adminBadge.innerText = '🔒 Requiere Rol ADMIN';
+                            adminBadge.style.background = '#fee2e2';
+                            adminBadge.style.color = '#dc2626';
+                        }
+                        if (lockedTitle) lockedTitle.innerText = 'Sección Protegida con Rol ADMIN';
+                        if (lockedDesc) lockedDesc.innerHTML = 'Para administrar usuarios y roles en JettraSecurityDB, primero debe iniciar sesión en el <b>Panel de Acreditación de Usuario</b> con una cuenta que posea el rol <b>ADMIN</b> (ej. <code>admin</code> / <code>admin</code>).';
                         return;
                     }
 
-                    if (manualInput) manualInput.value = token;
-                    indicator.style.background = '#22c55e';
+                    if (manualInput) {
+                        manualInput.value = token;
+                        manualInput.style.borderColor = '#059669';
+                        manualInput.style.background = '#f0fdf4';
+                    }
+                    if (indicator) indicator.style.background = '#22c55e';
 
-                    // Parsear payload JWT para extraer subject y roles
-                    try {
-                        const parts = token.split('.');
-                        if (parts.length === 3) {
-                            const payload = JSON.parse(atob(parts[1]));
-                            const user = payload.sub || 'Usuario';
-                            const roles = payload.roles || [];
-                            statusText.innerText = '🔓 Acreditado como: ' + user;
-                            statusText.style.color = '#15803d';
+                    // Parsear payload JWT para extraer subject, roles y expiración
+                    const payload = parseJwtPayload(token);
+                    if (!payload) {
+                        localStorage.removeItem('jettra_jwt_token');
+                        refreshAuthStatus();
+                        return;
+                    }
 
-                            let rolesHtml = '';
-                            roles.forEach(r => {
-                                rolesHtml += '<span style="background: #dcfce7; color: #16a34a; border: 1px solid #86efac; padding: 0.15rem 0.5rem; border-radius: 4px; font-weight: 700;">' + r + '</span>';
-                            });
-                            rolesBox.innerHTML = rolesHtml;
-                            return;
+                    if (payload.exp && (payload.exp * 1000 < Date.now())) {
+                        localStorage.removeItem('jettra_jwt_token');
+                        refreshAuthStatus();
+                        jettraShowDialog({
+                            title: 'Sesión Expirada',
+                            message: 'Su token JWT ha expirado. Por favor acredítese nuevamente para continuar utilizando las APIs.',
+                            icon: '⏳',
+                            confirmColor: '#dc2626'
+                        });
+                        return;
+                    }
+
+                    const user = payload.sub || 'Usuario';
+                    const roles = extractRoles(payload);
+                    const isAdmin = (user.toLowerCase() === 'admin') || roles.some(r => typeof r === 'string' && (r.toUpperCase() === 'ADMIN' || r.toUpperCase() === 'SECURITY_ADMIN'));
+
+                    if (statusText) {
+                        statusText.innerText = '🔓 Acreditado como: ' + user;
+                        statusText.style.color = '#15803d';
+                    }
+
+                    if (rolesBox) {
+                        let rolesHtml = '';
+                        roles.forEach(r => {
+                            rolesHtml += '<span style="background: #dcfce7; color: #16a34a; border: 1px solid #86efac; padding: 0.15rem 0.5rem; border-radius: 4px; font-weight: 700;">' + r + '</span>';
+                        });
+                        rolesBox.innerHTML = rolesHtml;
+                    }
+
+                    // Validar si el usuario posee rol ADMIN para activar la sección JettraSecurityDB
+                    if (isAdmin) {
+                        if (adminWrapper) {
+                            adminWrapper.style.display = 'block';
+                            const adminContent = document.getElementById('jettra-sec-admin-content');
+                            if (adminContent) adminContent.style.display = 'block';
                         }
-                    } catch (e) {}
-
-                    statusText.innerText = '🔓 Token Activo Guardado';
-                    statusText.style.color = '#15803d';
+                        if (adminLockedMsg) adminLockedMsg.style.display = 'none';
+                        if (adminActions) adminActions.style.display = 'flex';
+                        if (countBadge) countBadge.style.display = 'inline-block';
+                        if (adminBadge) {
+                            adminBadge.innerText = '🔓 Acceso ADMIN Concedido';
+                            adminBadge.style.background = '#dcfce7';
+                            adminBadge.style.color = '#15803d';
+                        }
+                        jettraLoadUsers();
+                    } else {
+                        if (adminWrapper) adminWrapper.style.display = 'none';
+                        if (adminLockedMsg) adminLockedMsg.style.display = 'flex';
+                        if (adminActions) adminActions.style.display = 'none';
+                        if (countBadge) countBadge.style.display = 'none';
+                        if (adminBadge) {
+                            adminBadge.innerText = '🔒 Acceso Denegado (No es ADMIN)';
+                            adminBadge.style.background = '#fee2e2';
+                            adminBadge.style.color = '#dc2626';
+                        }
+                        if (lockedTitle) lockedTitle.innerText = 'Acceso Denegado: Rol ADMIN Requerido';
+                        if (lockedDesc) lockedDesc.innerHTML = 'El usuario autenticado (<b>' + user + '</b>) no posee el rol <b>ADMIN</b> requerido para administrar usuarios y roles en JettraSecurityDB. Por favor inicie sesión con una cuenta administradora.';
+                    }
                 }
 
+                // =========================================================================
+                // Acciones de Acreditación (Login, Aplicar Token, Cerrar Sesión)
+                // =========================================================================
                 window.jettraLogin = async function() {
-                    const user = document.getElementById('jettra-login-user').value;
-                    const pass = document.getElementById('jettra-login-pass').value;
+                    const user = document.getElementById('jettra-login-user').value.trim();
+                    const pass = document.getElementById('jettra-login-pass').value.trim();
+                    const btn = document.getElementById('jettra-btn-login');
+                    const origText = btn ? btn.innerText : '🔑 Iniciar Sesión y Acreditarse';
+
                     if (!user || !pass) {
-                        alert('Por favor introduce usuario y contraseña');
+                        jettraShowDialog({
+                            title: 'Campos Requeridos',
+                            message: 'Por favor introduzca tanto el <b>Usuario</b> como la <b>Contraseña</b> para obtener el token JWT de acreditación.',
+                            icon: '⚠️',
+                            confirmColor: '#d97706'
+                        });
                         return;
                     }
 
+                    if (btn) {
+                        btn.disabled = true;
+                        btn.innerText = '⏳ Verificando credenciales...';
+                    }
+
                     try {
-                        const res = await fetch('/api/auth/login', {
+                        const res = await fetch('/api/auth/login?username=' + encodeURIComponent(user) + '&password=' + encodeURIComponent(pass), {
                             method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
+                            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
                             body: JSON.stringify({ username: user, password: pass })
                         });
-                        const data = await res.json();
+                        let data = {};
+                        try { data = await res.json(); } catch(e) {}
+
+                        if (btn) {
+                            btn.disabled = false;
+                            btn.innerText = origText;
+                        }
+
                         if (res.ok && data.rawToken) {
-                            localStorage.setItem('jettra_jwt_token', data.rawToken);
-                            refreshAuthStatus();
-                            jettraLoadUsers();
-                            alert('Acreditación exitosa para usuario: ' + user);
+                            // Mostrar AUTOMÁTICAMENTE el token en la sección "Ingresar Token JWT Existente"
+                            const manualInput = document.getElementById('jettra-manual-token');
+                            if (manualInput) {
+                                manualInput.value = data.rawToken;
+                                manualInput.style.borderColor = '#059669';
+                                manualInput.style.background = '#f0fdf4';
+                            }
+
+                            jettraShowDialog({
+                                title: 'Credenciales Validadas',
+                                message: 'Las credenciales de <b>' + user + '</b> fueron validadas correctamente por el servidor y se ha emitido un nuevo JWT Token.<br><br>'
+                                    + 'El token se ha cargado <b>automáticamente</b> en la casilla <b>"Ingresar Token JWT Existente"</b>.<br><br>'
+                                    + '👉 Haga clic en el botón verde <b>"✓ Aplicar Token"</b> para validar el token y habilitar las funciones de <b>Administración de Usuarios y Roles (JettraSecurityDB)</b> y el <b>Microservicio de Clientes</b>.',
+                                icon: '🔑',
+                                confirmText: 'Entendido',
+                                confirmColor: '#059669',
+                                onConfirm: function() {
+                                    const applyBtn = document.getElementById('jettra-btn-apply-token');
+                                    if (applyBtn) {
+                                        applyBtn.focus();
+                                        applyBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                    }
+                                }
+                            });
                         } else {
-                            alert('Fallo de autenticación: ' + (data.error || 'Credenciales inválidas'));
+                            jettraShowDialog({
+                                title: 'Fallo de Autenticación',
+                                message: data.error || 'Credenciales incorrectas o usuario inactivo en JettraSecurityDB.',
+                                icon: '❌',
+                                confirmColor: '#dc2626'
+                            });
                         }
                     } catch (err) {
-                        alert('Error conectando con el servicio de autenticación: ' + err.message);
+                        if (btn) {
+                            btn.disabled = false;
+                            btn.innerText = origText;
+                        }
+                        jettraShowDialog({
+                            title: 'Error de Red / Conexión',
+                            message: 'No fue posible comunicar con el servicio de autenticación (<code>/api/auth/login</code>): ' + err.message,
+                            icon: '⚠️',
+                            confirmColor: '#dc2626'
+                        });
                     }
                 };
 
                 window.jettraApplyManualToken = function() {
-                    const t = document.getElementById('jettra-manual-token').value.trim();
-                    if (!t) return;
+                    const manualInput = document.getElementById('jettra-manual-token');
+                    const t = manualInput ? manualInput.value.trim() : '';
+
+                    if (!t) {
+                        jettraShowDialog({
+                            title: 'Token Requerido',
+                            message: 'La casilla de token está vacía. Inicie sesión mediante credenciales o pegue un Token JWT Bearer existente para aplicar.',
+                            icon: '⚠️',
+                            confirmColor: '#d97706'
+                        });
+                        return;
+                    }
+
                     const raw = t.startsWith('Bearer ') ? t.substring(7).trim() : t;
+                    const parts = raw.split('.');
+
+                    if (parts.length !== 3) {
+                        jettraShowDialog({
+                            title: 'Token JWT Inválido',
+                            message: 'El valor provisto no cumple con el formato estándar de un JWT Token (debe contener 3 segmentos Base64 separados por puntos).',
+                            icon: '❌',
+                            confirmColor: '#dc2626'
+                        });
+                        return;
+                    }
+
+                    const payload = parseJwtPayload(raw);
+                    if (!payload) {
+                        jettraShowDialog({
+                            title: 'Error de Decodificación',
+                            message: 'No se pudo decodificar el contenido del token JWT.',
+                            icon: '❌',
+                            confirmColor: '#dc2626'
+                        });
+                        return;
+                    }
+
+                    if (payload.exp && (payload.exp * 1000 < Date.now())) {
+                        jettraShowDialog({
+                            title: 'Token JWT Expirado',
+                            message: 'El token ingresado expiró el <b>' + new Date(payload.exp * 1000).toLocaleString() + '</b>. Por favor genere uno nuevo autenticándose.',
+                            icon: '⏳',
+                            confirmColor: '#dc2626'
+                        });
+                        return;
+                    }
+
+                    // Guardar y refrescar toda la interfaz interactiva
                     localStorage.setItem('jettra_jwt_token', raw);
                     refreshAuthStatus();
-                    jettraLoadUsers();
+
+                    const user = payload.sub || 'Usuario';
+                    const roles = extractRoles(payload);
+                    const isAdmin = (user.toLowerCase() === 'admin') || roles.some(r => typeof r === 'string' && (r.toUpperCase() === 'ADMIN' || r.toUpperCase() === 'SECURITY_ADMIN'));
+
+                    let extraAdmin = isAdmin
+                        ? '<br><br>🛡️ <b>Acceso Administrador:</b> La sección <b>Administración de Usuarios y Roles (JettraSecurityDB)</b> ha sido habilitada.'
+                        : '<br><br>ℹ️ <i>Nota: Su cuenta no posee rol ADMIN. La administración de usuarios permanecerá bloqueada.</i>';
+
+                    jettraShowDialog({
+                        title: 'Token JWT Aplicado y Validado',
+                        message: 'Acreditación completada para <b>' + user + '</b>.<br>'
+                            + '<b>Roles activos:</b> ' + (roles.length > 0 ? roles.join(', ') : 'Ninguno')
+                            + extraAdmin
+                            + '<br><br>⚡ Las peticiones del <b>Microservicio de Clientes</b> y demás rutas OpenAPI han sido habilitadas para prueba interactiva.',
+                        icon: '✅',
+                        confirmText: 'Continuar',
+                        confirmColor: '#16a34a'
+                    });
                 };
 
                 window.jettraLogout = function() {
                     localStorage.removeItem('jettra_jwt_token');
+                    const manualInput = document.getElementById('jettra-manual-token');
+                    if (manualInput) {
+                        manualInput.value = '';
+                        manualInput.style.borderColor = '#cbd5e1';
+                        manualInput.style.background = '#ffffff';
+                    }
                     refreshAuthStatus();
-                    jettraLoadUsers();
+                    jettraShowDialog({
+                        title: 'Sesión Finalizada',
+                        message: 'Se ha eliminado el Token JWT. Las operaciones de Swagger-UI vuelven a requerir acreditación previa.',
+                        icon: 'ℹ️',
+                        confirmColor: '#2563eb'
+                    });
                 };
 
                 window.jettraToggleSection = function(id) {
@@ -596,7 +977,12 @@ public class SwaggerFluxView extends FluxView {
                     const r = document.getElementById('jettra-new-roles').value.trim();
 
                     if (!u || !p) {
-                        showSecNotification('Nombre de usuario y contraseña son requeridos', true);
+                        jettraShowDialog({
+                            title: 'Datos Requeridos',
+                            message: 'El <b>Nombre de usuario</b> y la <b>Contraseña</b> son obligatorios para registrar un nuevo usuario.',
+                            icon: '⚠️',
+                            confirmColor: '#d97706'
+                        });
                         return;
                     }
 
@@ -613,96 +999,144 @@ public class SwaggerFluxView extends FluxView {
                             document.getElementById('jettra-new-pass').value = '';
                             document.getElementById('jettra-new-email').value = '';
                             jettraLoadUsers();
+                            jettraShowDialog({
+                                title: 'Usuario Creado',
+                                message: 'El usuario <code>' + u + '</code> ha sido registrado exitosamente en JettraSecurityDB.',
+                                icon: '✅',
+                                confirmColor: '#16a34a'
+                            });
                         } else {
                             showSecNotification(data.error || 'Error al crear usuario', true);
+                            jettraShowDialog({
+                                title: 'Error Creando Usuario',
+                                message: data.error || 'No se pudo crear el usuario en JettraSecurityDB.',
+                                icon: '❌',
+                                confirmColor: '#dc2626'
+                            });
                         }
                     } catch(err) {
                         showSecNotification('Error: ' + err.message, true);
                     }
                 };
 
-                window.jettraDeleteUser = async function(username) {
-                    if (!confirm('¿Confirma que desea eliminar el usuario \\'' + username + '\\' de JettraSecurityDB?')) return;
-
-                    try {
-                        const res = await fetch('/api/security/users?username=' + encodeURIComponent(username), {
-                            method: 'DELETE',
-                            headers: getAuthHeaders()
-                        });
-                        const data = await res.json();
-                        if (res.ok) {
-                            showSecNotification('Usuario ' + username + ' eliminado exitosamente', false);
-                            jettraLoadUsers();
-                        } else {
-                            showSecNotification(data.error || 'Error al eliminar usuario', true);
+                window.jettraDeleteUser = function(username) {
+                    jettraShowDialog({
+                        title: 'Eliminar Usuario',
+                        message: '¿Confirma que desea eliminar permanentemente al usuario <code>' + username + '</code> de JettraSecurityDB?',
+                        type: 'confirm',
+                        icon: '🗑️',
+                        confirmText: 'Eliminar',
+                        confirmColor: '#dc2626',
+                        onConfirm: async function() {
+                            try {
+                                const res = await fetch('/api/security/users?username=' + encodeURIComponent(username), {
+                                    method: 'DELETE',
+                                    headers: getAuthHeaders()
+                                });
+                                const data = await res.json();
+                                if (res.ok) {
+                                    showSecNotification('Usuario ' + username + ' eliminado exitosamente', false);
+                                    jettraLoadUsers();
+                                } else {
+                                    showSecNotification(data.error || 'Error al eliminar usuario', true);
+                                }
+                            } catch(err) {
+                                showSecNotification('Error: ' + err.message, true);
+                            }
                         }
-                    } catch(err) {
-                        showSecNotification('Error: ' + err.message, true);
-                    }
+                    });
                 };
 
-                window.jettraPromptAddRole = async function(username) {
-                    const role = prompt('Ingrese el nombre del rol a asignar a \\'' + username + '\\' (ej. ADMIN, MANAGER, AUDITOR):');
-                    if (!role || !role.trim()) return;
+                window.jettraPromptAddRole = function(username) {
+                    jettraShowDialog({
+                        title: 'Asignar Rol al Usuario',
+                        message: 'Ingrese el nombre del rol a asignar al usuario <code>' + username + '</code> (ej. ADMIN, MANAGER, AUDITOR):',
+                        type: 'prompt',
+                        icon: '➕',
+                        placeholder: 'Nombre del rol (ej. ADMIN)...',
+                        confirmText: 'Asignar Rol',
+                        confirmColor: '#2563eb',
+                        onConfirm: async function(role) {
+                            if (!role || !role.trim()) return;
 
-                    try {
-                        const res = await fetch('/api/security/users/role', {
-                            method: 'POST',
-                            headers: getAuthHeaders(),
-                            body: JSON.stringify({ username: username, role: role.trim().toUpperCase(), action: 'add' })
-                        });
-                        const data = await res.json();
-                        if (res.ok) {
-                            showSecNotification('Rol ' + role.toUpperCase() + ' asignado a ' + username, false);
-                            jettraLoadUsers();
-                        } else {
-                            showSecNotification(data.error || 'Error asignando rol', true);
+                            try {
+                                const res = await fetch('/api/security/users/role', {
+                                    method: 'POST',
+                                    headers: getAuthHeaders(),
+                                    body: JSON.stringify({ username: username, role: role.trim().toUpperCase(), action: 'add' })
+                                });
+                                const data = await res.json();
+                                if (res.ok) {
+                                    showSecNotification('Rol ' + role.toUpperCase() + ' asignado a ' + username, false);
+                                    jettraLoadUsers();
+                                } else {
+                                    showSecNotification(data.error || 'Error asignando rol', true);
+                                }
+                            } catch(err) {
+                                showSecNotification('Error: ' + err.message, true);
+                            }
                         }
-                    } catch(err) {
-                        showSecNotification('Error: ' + err.message, true);
-                    }
+                    });
                 };
 
-                window.jettraRemoveRole = async function(username, role) {
-                    if (!confirm('¿Revocar el rol \\'' + role + '\\' del usuario \\'' + username + '\\'?')) return;
-
-                    try {
-                        const res = await fetch('/api/security/users/role', {
-                            method: 'POST',
-                            headers: getAuthHeaders(),
-                            body: JSON.stringify({ username: username, role: role, action: 'remove' })
-                        });
-                        const data = await res.json();
-                        if (res.ok) {
-                            showSecNotification('Rol ' + role + ' revocado de ' + username, false);
-                            jettraLoadUsers();
-                        } else {
-                            showSecNotification(data.error || 'Error revocando rol', true);
+                window.jettraRemoveRole = function(username, role) {
+                    jettraShowDialog({
+                        title: 'Revocar Rol',
+                        message: '¿Confirma que desea revocar el rol <b>' + role + '</b> del usuario <code>' + username + '</code>?',
+                        type: 'confirm',
+                        icon: '⚠️',
+                        confirmText: 'Revocar',
+                        confirmColor: '#dc2626',
+                        onConfirm: async function() {
+                            try {
+                                const res = await fetch('/api/security/users/role', {
+                                    method: 'POST',
+                                    headers: getAuthHeaders(),
+                                    body: JSON.stringify({ username: username, role: role, action: 'remove' })
+                                });
+                                const data = await res.json();
+                                if (res.ok) {
+                                    showSecNotification('Rol ' + role + ' revocado de ' + username, false);
+                                    jettraLoadUsers();
+                                } else {
+                                    showSecNotification(data.error || 'Error revocando rol', true);
+                                }
+                            } catch(err) {
+                                showSecNotification('Error: ' + err.message, true);
+                            }
                         }
-                    } catch(err) {
-                        showSecNotification('Error: ' + err.message, true);
-                    }
+                    });
                 };
 
-                window.jettraPromptPassword = async function(username) {
-                    const newPass = prompt('Ingrese la nueva contraseña para el usuario \\'' + username + '\\':');
-                    if (!newPass || !newPass.trim()) return;
+                window.jettraPromptPassword = function(username) {
+                    jettraShowDialog({
+                        title: 'Cambiar Contraseña',
+                        message: 'Ingrese la nueva contraseña para el usuario <code>' + username + '</code>:',
+                        type: 'prompt',
+                        icon: '🔑',
+                        placeholder: 'Nueva contraseña...',
+                        confirmText: 'Guardar Contraseña',
+                        confirmColor: '#d97706',
+                        onConfirm: async function(newPass) {
+                            if (!newPass || !newPass.trim()) return;
 
-                    try {
-                        const res = await fetch('/api/security/users/password', {
-                            method: 'POST',
-                            headers: getAuthHeaders(),
-                            body: JSON.stringify({ username: username, password: newPass.trim() })
-                        });
-                        const data = await res.json();
-                        if (res.ok) {
-                            showSecNotification('Contraseña actualizada para ' + username, false);
-                        } else {
-                            showSecNotification(data.error || 'Error actualizando contraseña', true);
+                            try {
+                                const res = await fetch('/api/security/users/password', {
+                                    method: 'POST',
+                                    headers: getAuthHeaders(),
+                                    body: JSON.stringify({ username: username, password: newPass.trim() })
+                                });
+                                const data = await res.json();
+                                if (res.ok) {
+                                    showSecNotification('Contraseña actualizada para ' + username, false);
+                                } else {
+                                    showSecNotification(data.error || 'Error actualizando contraseña', true);
+                                }
+                            } catch(err) {
+                                showSecNotification('Error: ' + err.message, true);
+                            }
                         }
-                    } catch(err) {
-                        showSecNotification('Error: ' + err.message, true);
-                    }
+                    });
                 };
 
                 window.jettraToggleStatus = async function(username, currentStatus) {
@@ -728,7 +1162,12 @@ public class SwaggerFluxView extends FluxView {
                     const input = document.getElementById('jettra-new-role-input');
                     const role = input ? input.value.trim().toUpperCase() : '';
                     if (!role) {
-                        showSecNotification('Ingrese el nombre del nuevo rol', true);
+                        jettraShowDialog({
+                            title: 'Rol Requerido',
+                            message: 'Por favor ingrese el nombre del nuevo rol a registrar.',
+                            icon: '⚠️',
+                            confirmColor: '#d97706'
+                        });
                         return;
                     }
 
@@ -764,6 +1203,9 @@ public class SwaggerFluxView extends FluxView {
                     }
                 };
 
+                // =========================================================================
+                // Ejecución Protegida de Endpoints (Requiere Acreditación Previa)
+                // =========================================================================
                 window.jettraExecuteRequest = async function(opId, method, path) {
                     const loader = document.getElementById('jettra-load-' + opId);
                     const resBox = document.getElementById('jettra-res-box-' + opId);
@@ -771,8 +1213,65 @@ public class SwaggerFluxView extends FluxView {
                     const timeEl = document.getElementById('jettra-res-time-' + opId);
                     const contentEl = document.getElementById('jettra-res-content-' + opId);
 
-                    loader.style.display = 'inline-block';
-                    resBox.style.display = 'none';
+                    const token = localStorage.getItem('jettra_jwt_token');
+
+                    // RECUERDA: TODAS LAS OPERACIONES CON swagger-ui, para ejecutarse primero el usuario debe haberse logeado y el server devuelto el JWT Token valido
+                    if (!token) {
+                        if (loader) loader.style.display = 'none';
+                        if (resBox) resBox.style.display = 'block';
+                        if (statusEl) {
+                            statusEl.innerText = '401 No Acreditado';
+                            statusEl.style.background = '#dc2626';
+                            statusEl.style.color = '#ffffff';
+                        }
+                        if (timeEl) timeEl.innerText = '0 ms';
+                        if (contentEl) {
+                            contentEl.innerText = JSON.stringify({
+                                error: "Acreditación Requerida",
+                                message: "Operación bloqueada en Swagger-UI: Todas las peticiones requieren que el usuario se haya acreditado previamente en el 'Panel de Acreditación de Usuario' y obtenido un JWT Token válido del servidor.",
+                                status: 401
+                            }, null, 2);
+                        }
+                        jettraShowDialog({
+                            title: 'Acreditación Requerida',
+                            message: '<b>Operación Bloqueada:</b> Para ejecutar peticiones en Swagger-UI (incluyendo el <i>Microservicio de Clientes</i>), primero debe autenticarse en el <b>Panel de Acreditación de Usuario</b>, obtener el token y pulsar el botón <b>✓ Aplicar Token</b>.',
+                            icon: '🔒',
+                            confirmText: 'Ir a Acreditación',
+                            confirmColor: '#2563eb',
+                            onConfirm: function() {
+                                const loginUserInput = document.getElementById('jettra-login-user');
+                                if (loginUserInput) {
+                                    loginUserInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                    loginUserInput.focus();
+                                }
+                            }
+                        });
+                        return;
+                    }
+
+                    // Validar si el token expiró antes de lanzar la petición
+                    try {
+                        const parts = token.split('.');
+                        if (parts.length === 3) {
+                            let b64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+                            while (b64.length % 4) { b64 += '='; }
+                            const payload = JSON.parse(decodeURIComponent(escape(atob(b64))));
+                            if (payload.exp && (payload.exp * 1000 < Date.now())) {
+                                localStorage.removeItem('jettra_jwt_token');
+                                refreshAuthStatus();
+                                jettraShowDialog({
+                                    title: 'Token JWT Expirado',
+                                    message: 'Su token JWT ha expirado. Por favor acredítese nuevamente en el Panel de Acreditación.',
+                                    icon: '⏳',
+                                    confirmColor: '#dc2626'
+                                });
+                                return;
+                            }
+                        }
+                    } catch(e) {}
+
+                    if (loader) loader.style.display = 'inline-block';
+                    if (resBox) resBox.style.display = 'none';
 
                     let finalPath = path;
                     const queryParams = new URLSearchParams();
@@ -798,10 +1297,7 @@ public class SwaggerFluxView extends FluxView {
                     }
 
                     const headers = { 'Accept': 'application/json' };
-                    const token = localStorage.getItem('jettra_jwt_token');
-                    if (token) {
-                        headers['Authorization'] = 'Bearer ' + token;
-                    }
+                    headers['Authorization'] = 'Bearer ' + token;
 
                     let body = null;
                     if (method === 'POST' || method === 'PUT' || method === 'PATCH') {
@@ -829,42 +1325,44 @@ public class SwaggerFluxView extends FluxView {
                             formattedText = JSON.stringify(json, null, 2);
                         } catch (e) {}
 
-                        loader.style.display = 'none';
-                        resBox.style.display = 'block';
+                        if (loader) loader.style.display = 'none';
+                        if (resBox) resBox.style.display = 'block';
 
-                        statusEl.innerText = res.status + ' ' + (res.statusText || '');
-                        if (res.status >= 200 && res.status < 300) {
-                            statusEl.style.background = '#15803d';
-                            statusEl.style.color = '#ffffff';
-                        } else if (res.status === 401 || res.status === 403) {
-                            statusEl.style.background = '#dc2626';
-                            statusEl.style.color = '#ffffff';
-                        } else {
-                            statusEl.style.background = '#d97706';
-                            statusEl.style.color = '#ffffff';
+                        if (statusEl) {
+                            statusEl.innerText = res.status + ' ' + (res.statusText || '');
+                            if (res.status >= 200 && res.status < 300) {
+                                statusEl.style.background = '#15803d';
+                                statusEl.style.color = '#ffffff';
+                            } else if (res.status === 401 || res.status === 403) {
+                                statusEl.style.background = '#dc2626';
+                                statusEl.style.color = '#ffffff';
+                            } else {
+                                statusEl.style.background = '#d97706';
+                                statusEl.style.color = '#ffffff';
+                            }
                         }
 
-                        timeEl.innerText = latency + ' ms';
-                        contentEl.innerText = formattedText || '(Cuerpo de respuesta vacío)';
+                        if (timeEl) timeEl.innerText = latency + ' ms';
+                        if (contentEl) contentEl.innerText = formattedText || '(Cuerpo de respuesta vacío)';
                     } catch (err) {
-                        loader.style.display = 'none';
-                        resBox.style.display = 'block';
-                        statusEl.innerText = 'ERROR';
-                        statusEl.style.background = '#dc2626';
-                        statusEl.style.color = '#ffffff';
-                        timeEl.innerText = '-';
-                        contentEl.innerText = 'Error al ejecutar petición: ' + err.message;
+                        if (loader) loader.style.display = 'none';
+                        if (resBox) resBox.style.display = 'block';
+                        if (statusEl) {
+                            statusEl.innerText = 'ERROR';
+                            statusEl.style.background = '#dc2626';
+                            statusEl.style.color = '#ffffff';
+                        }
+                        if (timeEl) timeEl.innerText = '-';
+                        if (contentEl) contentEl.innerText = 'Error al ejecutar petición: ' + err.message;
                     }
                 };
 
                 // Iniciar estado al cargar la página
                 window.addEventListener('DOMContentLoaded', function() {
                     refreshAuthStatus();
-                    jettraLoadUsers();
                 });
                 setTimeout(function() {
                     refreshAuthStatus();
-                    jettraLoadUsers();
                 }, 100);
             })();
             </script>
