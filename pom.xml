@@ -35,9 +35,6 @@
         <module>jettra-server-core</module>
         <module>jettra-server-jakarta</module>
         <module>jettra-server-flux</module>
-
-        <!-- Módulo Agregador de Ejemplos -->
-        <module>JettraServerExamples</module>
     </modules>
 
     <properties>

@@ -24,7 +24,11 @@ public class SwaggerFluxHandler implements HttpHandler {
     }
 
     public SwaggerFluxHandler(List<Class<?>> controllers, String title) {
-        this.controllers = controllers != null ? controllers : Collections.emptyList();
+        List<Class<?>> allControllers = new java.util.ArrayList<>(controllers != null ? controllers : Collections.emptyList());
+        if (!allControllers.contains(io.jettra.server.core.security.rest.SecurityManagementResource.class)) {
+            allControllers.add(io.jettra.server.core.security.rest.SecurityManagementResource.class);
+        }
+        this.controllers = Collections.unmodifiableList(allControllers);
         this.title = title;
         this.renderer = new FluxRenderer();
     }

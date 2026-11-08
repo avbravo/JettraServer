@@ -79,7 +79,11 @@ public class SwaggerFluxView extends FluxView {
         Widget accreditationCard = buildAccreditationPanel();
         rootWidgets.add(accreditationCard);
 
-        // 3. Catálogo de Rutas y Endpoints
+        // 3. Panel de Administración de Usuarios y Roles (JettraSecurityDB)
+        Widget userRoleManagementCard = buildUserRoleManagementPanel();
+        rootWidgets.add(userRoleManagementCard);
+
+        // 4. Catálogo de Rutas y Endpoints
         Map<String, Object> paths = (Map<String, Object>) openApiModel.getOrDefault("paths", Collections.emptyMap());
 
         // Agrupar operaciones por tags
@@ -184,6 +188,97 @@ public class SwaggerFluxView extends FluxView {
 
         return Card.of(Column.of(authTitle, authDesc, statusRow, formsRow))
                 .modifier(new Modifier().style("background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.25rem; margin-bottom: 2rem; box-shadow: 0 2px 8px rgba(0,0,0,0.03);"));
+    }
+
+    private Widget buildUserRoleManagementPanel() {
+        String html = """
+            <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.25rem; margin-bottom: 2rem; box-shadow: 0 2px 8px rgba(0,0,0,0.03);">
+                <!-- Cabecera de la sección -->
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; border-bottom: 2px solid #f1f5f9; padding-bottom: 0.8rem; margin-bottom: 1rem;">
+                    <div>
+                        <div style="display: flex; align-items: center; gap: 0.6rem;">
+                            <span style="font-size: 1.3rem;">👥</span>
+                            <h3 style="margin: 0; font-size: 1.2rem; font-weight: 800; color: #0f172a;">Administración de Usuarios y Roles (JettraSecurityDB)</h3>
+                            <span id="jettra-users-count-badge" style="background: #e0f2fe; color: #0369a1; font-weight: 700; font-size: 0.75rem; padding: 0.2rem 0.6rem; border-radius: 9999px;">0 Usuarios</span>
+                        </div>
+                        <p style="margin: 0.3rem 0 0 0; font-size: 0.85rem; color: #64748b;">
+                            Gestión interactiva en tiempo real sobre las colecciones <code>juser</code>, <code>jrole</code> y <code>jcredential</code> almacenadas en la base de datos embebida de esta instancia.
+                        </p>
+                    </div>
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <button onclick="jettraLoadUsers()" style="background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; border-radius: 6px; padding: 0.45rem 0.9rem; font-weight: 600; font-size: 0.82rem; cursor: pointer; display: flex; align-items: center; gap: 0.35rem; transition: all 0.2s;">
+                            🔄 Refrescar
+                        </button>
+                        <button onclick="jettraToggleSection('jettra-sec-admin-content')" style="background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; border-radius: 6px; padding: 0.45rem 0.75rem; font-weight: 600; font-size: 0.82rem; cursor: pointer;">
+                            <span id="jettra-sec-admin-toggle-icon">▼</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Contenido colapsable -->
+                <div id="jettra-sec-admin-content" style="display: block;">
+                    <!-- Notificación de estado -->
+                    <div id="jettra-sec-notification" style="display: none; padding: 0.6rem 0.9rem; border-radius: 6px; font-size: 0.85rem; margin-bottom: 1rem;"></div>
+
+                    <!-- Tabla de usuarios interactiva -->
+                    <div style="overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 1.5rem; background: #fafafa;">
+                        <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.85rem;">
+                            <thead style="background: #f1f5f9; color: #475569; font-weight: 700;">
+                                <tr>
+                                    <th style="padding: 0.65rem 0.9rem; border-bottom: 1px solid #e2e8f0;">Usuario</th>
+                                    <th style="padding: 0.65rem 0.9rem; border-bottom: 1px solid #e2e8f0;">Email</th>
+                                    <th style="padding: 0.65rem 0.9rem; border-bottom: 1px solid #e2e8f0;">Estado</th>
+                                    <th style="padding: 0.65rem 0.9rem; border-bottom: 1px solid #e2e8f0;">Roles Asignados</th>
+                                    <th style="padding: 0.65rem 0.9rem; border-bottom: 1px solid #e2e8f0; text-align: center;">Acciones de Gestión</th>
+                                </tr>
+                            </thead>
+                            <tbody id="jettra-users-tbody">
+                                <tr><td colspan="5" style="padding: 1.5rem; text-align: center; color: #94a3b8;">Cargando usuarios de JettraSecurityDB...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Formularios de Creación (Usuarios y Roles) en Grid -->
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.25rem;">
+                        <!-- Form Crear Usuario -->
+                        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1rem;">
+                            <div style="font-weight: 700; font-size: 0.9rem; color: #1e293b; margin-bottom: 0.6rem; display: flex; align-items: center; gap: 0.4rem;">
+                                <span>➕</span> Registrar Nuevo Usuario en JettraSecurityDB
+                            </div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 0.5rem;">
+                                <input id="jettra-new-user" type="text" placeholder="Usuario (ej. operario)" style="padding: 0.45rem 0.6rem; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.82rem;" />
+                                <input id="jettra-new-pass" type="password" placeholder="Contraseña" style="padding: 0.45rem 0.6rem; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.82rem;" />
+                            </div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 0.6rem;">
+                                <input id="jettra-new-email" type="email" placeholder="Email (ej. op@jettra.io)" style="padding: 0.45rem 0.6rem; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.82rem;" />
+                                <input id="jettra-new-roles" type="text" placeholder="Roles (ej. USER, MANAGER)" value="USER" style="padding: 0.45rem 0.6rem; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.82rem;" />
+                            </div>
+                            <button onclick="jettraCreateUser()" style="width: 100%; background: #2563eb; color: #ffffff; border: none; border-radius: 6px; padding: 0.5rem; font-weight: 700; font-size: 0.83rem; cursor: pointer; transition: background 0.2s;">
+                                💾 Guardar Usuario
+                            </button>
+                        </div>
+
+                        <!-- Form Crear Roles y Catálogo -->
+                        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1rem;">
+                            <div style="font-weight: 700; font-size: 0.9rem; color: #1e293b; margin-bottom: 0.6rem; display: flex; align-items: center; gap: 0.4rem;">
+                                <span>🛡️</span> Roles del Sistema (JettraSecurityDB)
+                            </div>
+                            <div style="display: flex; gap: 0.5rem; margin-bottom: 0.75rem;">
+                                <input id="jettra-new-role-input" type="text" placeholder="Nuevo rol (ej. AUDITOR)" style="flex: 1; padding: 0.45rem 0.6rem; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.82rem; text-transform: uppercase;" />
+                                <button onclick="jettraCreateRole()" style="background: #0d9488; color: #ffffff; border: none; border-radius: 6px; padding: 0.45rem 0.8rem; font-weight: 700; font-size: 0.82rem; cursor: pointer;">
+                                    ➕ Crear Rol
+                                </button>
+                            </div>
+                            <div style="font-size: 0.8rem; font-weight: 600; color: #475569; margin-bottom: 0.4rem;">Roles Registrados en la Instancia:</div>
+                            <div id="jettra-roles-pills-container" style="display: flex; flex-wrap: wrap; gap: 0.4rem; min-height: 28px;">
+                                <span style="color: #94a3b8; font-size: 0.8rem;">Cargando roles...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            """;
+        return RawHtml.of(html);
     }
 
     @SuppressWarnings("unchecked")
@@ -362,6 +457,7 @@ public class SwaggerFluxView extends FluxView {
                         if (res.ok && data.rawToken) {
                             localStorage.setItem('jettra_jwt_token', data.rawToken);
                             refreshAuthStatus();
+                            jettraLoadUsers();
                             alert('Acreditación exitosa para usuario: ' + user);
                         } else {
                             alert('Fallo de autenticación: ' + (data.error || 'Credenciales inválidas'));
@@ -377,11 +473,282 @@ public class SwaggerFluxView extends FluxView {
                     const raw = t.startsWith('Bearer ') ? t.substring(7).trim() : t;
                     localStorage.setItem('jettra_jwt_token', raw);
                     refreshAuthStatus();
+                    jettraLoadUsers();
                 };
 
                 window.jettraLogout = function() {
                     localStorage.removeItem('jettra_jwt_token');
                     refreshAuthStatus();
+                    jettraLoadUsers();
+                };
+
+                window.jettraToggleSection = function(id) {
+                    const el = document.getElementById(id);
+                    const icon = document.getElementById('jettra-sec-admin-toggle-icon');
+                    if (!el) return;
+                    if (el.style.display === 'none') {
+                        el.style.display = 'block';
+                        if (icon) icon.innerText = '▼';
+                    } else {
+                        el.style.display = 'none';
+                        if (icon) icon.innerText = '▶';
+                    }
+                };
+
+                function showSecNotification(msg, isError) {
+                    const notif = document.getElementById('jettra-sec-notification');
+                    if (!notif) return;
+                    notif.style.display = 'block';
+                    notif.style.background = isError ? '#fee2e2' : '#dcfce7';
+                    notif.style.color = isError ? '#991b1b' : '#166534';
+                    notif.style.border = '1px solid ' + (isError ? '#f87171' : '#86efac');
+                    notif.innerText = msg;
+                    setTimeout(() => { notif.style.display = 'none'; }, 4500);
+                }
+
+                function getAuthHeaders() {
+                    const headers = { 'Content-Type': 'application/json', 'Accept': 'application/json' };
+                    const token = localStorage.getItem('jettra_jwt_token');
+                    if (token) headers['Authorization'] = 'Bearer ' + token;
+                    return headers;
+                }
+
+                window.jettraLoadUsers = async function() {
+                    const tbody = document.getElementById('jettra-users-tbody');
+                    const countBadge = document.getElementById('jettra-users-count-badge');
+                    const rolesPills = document.getElementById('jettra-roles-pills-container');
+                    if (!tbody) return;
+
+                    try {
+                        const [usersRes, rolesRes] = await Promise.all([
+                            fetch('/api/security/users', { headers: getAuthHeaders() }),
+                            fetch('/api/security/roles', { headers: getAuthHeaders() })
+                        ]);
+
+                        const users = await usersRes.json();
+                        let roles = [];
+                        try { roles = await rolesRes.json(); } catch(e) {}
+
+                        if (rolesPills && Array.isArray(roles)) {
+                            if (roles.length === 0) {
+                                rolesPills.innerHTML = '<span style="color: #94a3b8; font-size: 0.8rem;">Sin roles registrados</span>';
+                            } else {
+                                let rHtml = '';
+                                roles.forEach(r => {
+                                    const rName = (typeof r === 'object' && r.name) ? r.name : r;
+                                    rHtml += '<span style="background: #e2e8f0; color: #334155; font-size: 0.75rem; font-weight: 700; padding: 0.2rem 0.5rem; border-radius: 4px; border: 1px solid #cbd5e1;">🛡️ ' + rName + '</span>';
+                                });
+                                rolesPills.innerHTML = rHtml;
+                            }
+                        }
+
+                        if (!Array.isArray(users) || users.length === 0) {
+                            tbody.innerHTML = '<tr><td colspan="5" style="padding: 1.5rem; text-align: center; color: #64748b;">No hay usuarios registrados en JettraSecurityDB.</td></tr>';
+                            if (countBadge) countBadge.innerText = '0 Usuarios';
+                            return;
+                        }
+
+                        if (countBadge) countBadge.innerText = users.length + (users.length === 1 ? ' Usuario' : ' Usuarios');
+
+                        let rowsHtml = '';
+                        users.forEach(u => {
+                            const isActive = u.active !== false;
+                            const statusBadge = isActive
+                                ? '<span style="background: #dcfce7; color: #15803d; font-weight: 700; font-size: 0.75rem; padding: 0.2rem 0.5rem; border-radius: 4px; border: 1px solid #86efac;">● Activo</span>'
+                                : '<span style="background: #fee2e2; color: #b91c1c; font-weight: 700; font-size: 0.75rem; padding: 0.2rem 0.5rem; border-radius: 4px; border: 1px solid #fca5a5;">○ Inactivo</span>';
+
+                            let rolesBadges = '';
+                            const uRoles = u.roles || [];
+                            if (uRoles.length === 0) {
+                                rolesBadges = '<span style="color: #94a3b8; font-size: 0.75rem; font-style: italic;">Sin roles</span>';
+                            } else {
+                                uRoles.forEach(r => {
+                                    rolesBadges += '<span style="background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; font-size: 0.75rem; font-weight: 700; padding: 0.15rem 0.45rem; border-radius: 4px; margin-right: 0.3rem; display: inline-flex; align-items: center; gap: 0.3rem;">'
+                                        + r
+                                        + '<span onclick="jettraRemoveRole(\\'' + u.username + '\\', \\'' + r + '\\')" title="Revocar rol" style="cursor: pointer; color: #ef4444; font-weight: 900; font-size: 0.85rem;">×</span>'
+                                        + '</span>';
+                                });
+                            }
+
+                            rowsHtml += '<tr style="border-bottom: 1px solid #e2e8f0; background: #ffffff;">'
+                                + '<td style="padding: 0.65rem 0.9rem; font-weight: 700; color: #0f172a;">👤 <code>' + u.username + '</code></td>'
+                                + '<td style="padding: 0.65rem 0.9rem; color: #475569; font-size: 0.82rem;">' + (u.email || '<span style="color: #94a3b8;">-</span>') + '</td>'
+                                + '<td style="padding: 0.65rem 0.9rem;">' + statusBadge + '</td>'
+                                + '<td style="padding: 0.65rem 0.9rem;">' + rolesBadges + '</td>'
+                                + '<td style="padding: 0.65rem 0.9rem; text-align: center;">'
+                                + '<div style="display: inline-flex; gap: 0.35rem; flex-wrap: wrap; justify-content: center;">'
+                                + '<button onclick="jettraPromptAddRole(\\'' + u.username + '\\')" title="Asignar rol" style="background: #f1f5f9; color: #2563eb; border: 1px solid #cbd5e1; border-radius: 4px; padding: 0.25rem 0.5rem; font-size: 0.75rem; font-weight: 600; cursor: pointer;">➕ Rol</button>'
+                                + '<button onclick="jettraPromptPassword(\\'' + u.username + '\\')" title="Cambiar clave" style="background: #f1f5f9; color: #d97706; border: 1px solid #cbd5e1; border-radius: 4px; padding: 0.25rem 0.5rem; font-size: 0.75rem; font-weight: 600; cursor: pointer;">🔑 Clave</button>'
+                                + '<button onclick="jettraToggleStatus(\\'' + u.username + '\\', ' + isActive + ')" title="Alternar activo/inactivo" style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; border-radius: 4px; padding: 0.25rem 0.5rem; font-size: 0.75rem; font-weight: 600; cursor: pointer;">⚡ ' + (isActive ? 'Desactivar' : 'Activar') + '</button>'
+                                + '<button onclick="jettraDeleteUser(\\'' + u.username + '\\')" title="Eliminar usuario" style="background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; border-radius: 4px; padding: 0.25rem 0.5rem; font-size: 0.75rem; font-weight: 600; cursor: pointer;">🗑️</button>'
+                                + '</div></td></tr>';
+                        });
+                        tbody.innerHTML = rowsHtml;
+                    } catch (err) {
+                        tbody.innerHTML = '<tr><td colspan="5" style="padding: 1.5rem; text-align: center; color: #ef4444;">Error conectando con la API de seguridad: ' + err.message + '</td></tr>';
+                    }
+                };
+
+                window.jettraCreateUser = async function() {
+                    const u = document.getElementById('jettra-new-user').value.trim();
+                    const p = document.getElementById('jettra-new-pass').value.trim();
+                    const e = document.getElementById('jettra-new-email').value.trim();
+                    const r = document.getElementById('jettra-new-roles').value.trim();
+
+                    if (!u || !p) {
+                        showSecNotification('Nombre de usuario y contraseña son requeridos', true);
+                        return;
+                    }
+
+                    try {
+                        const res = await fetch('/api/security/users', {
+                            method: 'POST',
+                            headers: getAuthHeaders(),
+                            body: JSON.stringify({ username: u, password: p, email: e, roles: r })
+                        });
+                        const data = await res.json();
+                        if (res.ok) {
+                            showSecNotification('Usuario ' + u + ' creado exitosamente en JettraSecurityDB', false);
+                            document.getElementById('jettra-new-user').value = '';
+                            document.getElementById('jettra-new-pass').value = '';
+                            document.getElementById('jettra-new-email').value = '';
+                            jettraLoadUsers();
+                        } else {
+                            showSecNotification(data.error || 'Error al crear usuario', true);
+                        }
+                    } catch(err) {
+                        showSecNotification('Error: ' + err.message, true);
+                    }
+                };
+
+                window.jettraDeleteUser = async function(username) {
+                    if (!confirm('¿Confirma que desea eliminar el usuario \\'' + username + '\\' de JettraSecurityDB?')) return;
+
+                    try {
+                        const res = await fetch('/api/security/users?username=' + encodeURIComponent(username), {
+                            method: 'DELETE',
+                            headers: getAuthHeaders()
+                        });
+                        const data = await res.json();
+                        if (res.ok) {
+                            showSecNotification('Usuario ' + username + ' eliminado exitosamente', false);
+                            jettraLoadUsers();
+                        } else {
+                            showSecNotification(data.error || 'Error al eliminar usuario', true);
+                        }
+                    } catch(err) {
+                        showSecNotification('Error: ' + err.message, true);
+                    }
+                };
+
+                window.jettraPromptAddRole = async function(username) {
+                    const role = prompt('Ingrese el nombre del rol a asignar a \\'' + username + '\\' (ej. ADMIN, MANAGER, AUDITOR):');
+                    if (!role || !role.trim()) return;
+
+                    try {
+                        const res = await fetch('/api/security/users/role', {
+                            method: 'POST',
+                            headers: getAuthHeaders(),
+                            body: JSON.stringify({ username: username, role: role.trim().toUpperCase(), action: 'add' })
+                        });
+                        const data = await res.json();
+                        if (res.ok) {
+                            showSecNotification('Rol ' + role.toUpperCase() + ' asignado a ' + username, false);
+                            jettraLoadUsers();
+                        } else {
+                            showSecNotification(data.error || 'Error asignando rol', true);
+                        }
+                    } catch(err) {
+                        showSecNotification('Error: ' + err.message, true);
+                    }
+                };
+
+                window.jettraRemoveRole = async function(username, role) {
+                    if (!confirm('¿Revocar el rol \\'' + role + '\\' del usuario \\'' + username + '\\'?')) return;
+
+                    try {
+                        const res = await fetch('/api/security/users/role', {
+                            method: 'POST',
+                            headers: getAuthHeaders(),
+                            body: JSON.stringify({ username: username, role: role, action: 'remove' })
+                        });
+                        const data = await res.json();
+                        if (res.ok) {
+                            showSecNotification('Rol ' + role + ' revocado de ' + username, false);
+                            jettraLoadUsers();
+                        } else {
+                            showSecNotification(data.error || 'Error revocando rol', true);
+                        }
+                    } catch(err) {
+                        showSecNotification('Error: ' + err.message, true);
+                    }
+                };
+
+                window.jettraPromptPassword = async function(username) {
+                    const newPass = prompt('Ingrese la nueva contraseña para el usuario \\'' + username + '\\':');
+                    if (!newPass || !newPass.trim()) return;
+
+                    try {
+                        const res = await fetch('/api/security/users/password', {
+                            method: 'POST',
+                            headers: getAuthHeaders(),
+                            body: JSON.stringify({ username: username, password: newPass.trim() })
+                        });
+                        const data = await res.json();
+                        if (res.ok) {
+                            showSecNotification('Contraseña actualizada para ' + username, false);
+                        } else {
+                            showSecNotification(data.error || 'Error actualizando contraseña', true);
+                        }
+                    } catch(err) {
+                        showSecNotification('Error: ' + err.message, true);
+                    }
+                };
+
+                window.jettraToggleStatus = async function(username, currentStatus) {
+                    try {
+                        const res = await fetch('/api/security/users/status', {
+                            method: 'POST',
+                            headers: getAuthHeaders(),
+                            body: JSON.stringify({ username: username, active: !currentStatus })
+                        });
+                        const data = await res.json();
+                        if (res.ok) {
+                            showSecNotification('Estado actualizado para ' + username, false);
+                            jettraLoadUsers();
+                        } else {
+                            showSecNotification(data.error || 'Error actualizando estado', true);
+                        }
+                    } catch(err) {
+                        showSecNotification('Error: ' + err.message, true);
+                    }
+                };
+
+                window.jettraCreateRole = async function() {
+                    const input = document.getElementById('jettra-new-role-input');
+                    const role = input ? input.value.trim().toUpperCase() : '';
+                    if (!role) {
+                        showSecNotification('Ingrese el nombre del nuevo rol', true);
+                        return;
+                    }
+
+                    try {
+                        const res = await fetch('/api/security/roles', {
+                            method: 'POST',
+                            headers: getAuthHeaders(),
+                            body: JSON.stringify({ name: role })
+                        });
+                        const data = await res.json();
+                        if (res.ok) {
+                            showSecNotification('Rol ' + role + ' registrado en JettraSecurityDB', false);
+                            if (input) input.value = '';
+                            jettraLoadUsers();
+                        } else {
+                            showSecNotification(data.error || 'Error registrando rol', true);
+                        }
+                    } catch(err) {
+                        showSecNotification('Error: ' + err.message, true);
+                    }
                 };
 
                 window.jettraToggleOp = function(opId) {
@@ -491,8 +858,14 @@ public class SwaggerFluxView extends FluxView {
                 };
 
                 // Iniciar estado al cargar la página
-                window.addEventListener('DOMContentLoaded', refreshAuthStatus);
-                setTimeout(refreshAuthStatus, 100);
+                window.addEventListener('DOMContentLoaded', function() {
+                    refreshAuthStatus();
+                    jettraLoadUsers();
+                });
+                setTimeout(function() {
+                    refreshAuthStatus();
+                    jettraLoadUsers();
+                }, 100);
             })();
             </script>
             """;

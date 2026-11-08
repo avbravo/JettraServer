@@ -76,11 +76,12 @@ El proyecto se organiza en una arquitectura multi-módulo consolidada donde **`J
 | **`JettraStudio`** | [JettraStudio](file:///home/avbravo/NetBeansProjects/jettrastack_local/JettraServer/JettraStudio) | Entorno visual y herramientas de desarrollo para el stack Jettra. |
 | **`themes/*`** | [themes](file:///home/avbravo/NetBeansProjects/jettrastack_local/JettraServer/themes) | Temas visuales para aplicaciones web (`Admin`, `AdminLTE`, `Metropolis`, `Tail`, `Traditional`). |
 
-### 2.3. Módulo Agregador de Proyectos de Demostración (`JettraServerExamples`)
-| Proyecto | Ruta | Descripción |
-| :--- | :--- | :--- |
-| **`JettraServerExample`** | [JettraServerExample](file:///home/avbravo/NetBeansProjects/jettrastack_local/JettraServer/JettraServerExamples/JettraServerExample) | Aplicación empresarial completa integrando vistas Facelets (`.xhtml`), vistas JettraFlux, beans Jakarta CDI, **Hamburger Menu responsivo** y Swagger-UI. |
-| **`JettraServerBackEndExample`** | [JettraServerBackEndExample](file:///home/avbravo/NetBeansProjects/jettrastack_local/JettraServer/JettraServerExamples/JettraServerBackEndExample) | Microservicios REST de backend de alto rendimiento en Java 25+, autenticación estricta JWT Bearer, JettraSecurityDB, Swagger-UI reactivo y ciclo de vida continuo (`await()`). |
+### 2.3. Proyecto Agregador Hermano de Demostración (`JettraServerExamples`)
+Ubicado como repositorio y módulo agregador hermano independiente en [`JettraServerExamples`](file:///home/avbravo/NetBeansProjects/jettrastack_local/JettraServerExamples), contiene los proyectos de demostración desacoplados del núcleo del servidor:
+| Proyecto | Ruta | Documentación Guía | Descripción |
+| :--- | :--- | :--- | :--- |
+| **`JettraServerExample`** | [JettraServerExample](file:///home/avbravo/NetBeansProjects/jettrastack_local/JettraServerExamples/JettraServerExample) | [`README.md`](file:///home/avbravo/NetBeansProjects/jettrastack_local/JettraServerExamples/JettraServerExample/README.md) | Aplicación empresarial completa integrando vistas Facelets (`.xhtml`), vistas JettraFlux, beans Jakarta CDI, **Hamburger Menu responsivo**, Swagger-UI y administración de `JettraSecurityDB`. |
+| **`JettraServerBackEndExample`** | [JettraServerBackEndExample](file:///home/avbravo/NetBeansProjects/jettrastack_local/JettraServerExamples/JettraServerBackEndExample) | [`README.md`](file:///home/avbravo/NetBeansProjects/jettrastack_local/JettraServerExamples/JettraServerBackEndExample/README.md) | Microservicios REST de backend de alto rendimiento en Java 25+, autenticación estricta JWT Bearer, JettraSecurityDB, Swagger-UI reactivo con gestión de usuarios/roles y ciclo de vida continuo (`await()`). |
 
 ---
 
@@ -206,12 +207,18 @@ El módulo [`jettra-server-flux`](file:///home/avbravo/NetBeansProjects/jettrast
   - `StorageMonitorFluxView`: Dashboard reactivo en tiempo real que visualiza el uso del motor de persistencia tri-modal y métricas de memoria.
   - `TelemetryFluxView`: Métricas de CPU, hilos virtuales de Loom y Garbage Collector.
 
-### 6.1. Swagger-UI con Acreditación de Seguridad en JettraFlux
+### 6.1. Swagger-UI con Acreditación de Seguridad y Administración de JettraSecurityDB en JettraFlux
 El componente [`SwaggerFluxView`](file:///home/avbravo/NetBeansProjects/jettrastack_local/JettraServer/jettra-server-flux/src/main/java/io/jettra/server/flux/swagger/SwaggerFluxView.java) reemplaza a Swagger-UI JavaScript tradicional por una interfaz moderna, ultra-ligera y reactiva renderizada 100% con widgets de JettraFlux:
 
 - **Acreditación de Usuario en Vivo (JettraSecurityDB):**
   - Panel superior interactivo que permite autenticarse con credenciales (`admin` / `admin`) o ingresar manualmente un token JWT Bearer existente.
   - Detecta y muestra dinámicamente los roles concedidos (`ADMIN`, `MANAGER`, etc.) y el estado de la sesión (`🔒 No Acreditado` vs `🔓 Acreditado como: admin`).
+- **Administración Integral de Usuarios y Roles (JettraSecurityDB):**
+  - Sección visual interactiva conectada a las colecciones `juser`, `jrole` y `jcredential` de la instancia.
+  - **Tabla Dinámica de Usuarios:** Muestra en tiempo real todos los usuarios registrados, su correo electrónico, estado (`● Activo` / `○ Inactivo`), roles asignados (con botón de revocación directa `×`) y acciones de gestión.
+  - **Gestión de Credenciales y Estado:** Acciones inmediatas para asignar roles adicionales, cambiar contraseñas, alternar estado activo/inactivo y eliminar usuarios de `JettraSecurityDB`.
+  - **Formulario de Registro de Usuarios:** Creación rápida de usuarios con contraseña inicial, email y roles delimitados por comas.
+  - **Gestor de Roles del Sistema:** Registro y visualización en tiempo real de todos los roles reconocidos por el servidor.
 - **Explorador Interactivo de Endpoints:**
   - Agrupación por tags temáticos y badges cromáticos por verbo HTTP (`GET` en azul, `POST` en verde, `PUT` en ámbar, `DELETE` en rojo).
   - Indicadores de seguridad por endpoint (`🔒 Requiere: [ADMIN]` vs `🌐 Público`).
@@ -228,7 +235,7 @@ El componente [`SwaggerFluxView`](file:///home/avbravo/NetBeansProjects/jettrast
 
 ## 7. Proyecto de Microservicios: JettraServerBackEndExample
 
-[`JettraServerBackEndExample`](file:///home/avbravo/NetBeansProjects/jettrastack_local/JettraServer/JettraServerExamples/JettraServerBackEndExample) (ubicado dentro de `JettraServerExamples`) es una implementación de referencia orientada exclusivamente a arquitecturas de microservicios backend:
+[`JettraServerBackEndExample`](file:///home/avbravo/NetBeansProjects/jettrastack_local/JettraServerExamples/JettraServerBackEndExample) (ubicado dentro de `JettraServerExamples`) es una implementación de referencia orientada exclusivamente a arquitecturas de microservicios backend:
 
 - **Microservicio de Clientes (`CustomerResource`):** Endpoints protegidos para consulta, creación y baja de clientes con validación de roles (`ADMIN`, `MANAGER`, `USER`).
 - **Microservicio de Órdenes (`OrderResource`):** Gestión de pedidos, facturación y cancelaciones atómicas.
@@ -261,10 +268,10 @@ El componente [`SwaggerFluxView`](file:///home/avbravo/NetBeansProjects/jettrast
 
 ## 8. JettraServerExample: Aplicación Empresarial y Hamburger Menu
 
-El proyecto de demostración web [`JettraServerExample`](file:///home/avbravo/NetBeansProjects/jettrastack_local/JettraServer/JettraServerExamples/JettraServerExample) (ubicado en `JettraServerExamples`) incorpora las tecnologías clave del frontend empresarial moderno:
+El proyecto de demostración web [`JettraServerExample`](file:///home/avbravo/NetBeansProjects/jettrastack_local/JettraServerExamples/JettraServerExample) (ubicado en `JettraServerExamples`) incorpora las tecnologías clave del frontend empresarial moderno:
 
 ### 8.1. Hamburger Menu Responsivo y Adaptativo
-Para garantizar la mejor experiencia en cualquier resolución de pantalla (móviles, tablets, portátiles y monitores ultra-wide), la plantilla principal [`template.xhtml`](file:///home/avbravo/NetBeansProjects/jettrastack_local/JettraServer/JettraServerExamples/JettraServerExample/src/main/resources/webapp/template.xhtml) implementa un **Hamburger Menu interactivo**:
+Para garantizar la mejor experiencia en cualquier resolución de pantalla (móviles, tablets, portátiles y monitores ultra-wide), la plantilla principal [`template.xhtml`](file:///home/avbravo/NetBeansProjects/jettrastack_local/JettraServerExamples/JettraServerExample/src/main/resources/webapp/template.xhtml) implementa un **Hamburger Menu interactivo**:
 
 - **Comportamiento en Escritorio (> 900px):**
   - Al pulsar el botón hamburguesa en la barra superior (`header`), el panel lateral izquierdo (`.layout-left`) se contrae fluidamente con transición cúbica (`margin-left: -260px; opacity: 0;`), expandiendo el área central de trabajo a pantalla completa.
@@ -277,7 +284,7 @@ Para garantizar la mejor experiencia en cualquier resolución de pantalla (móvi
 
 ### 8.2. Swagger-UI y Especificación OpenAPI
 - **Acceso:** Disponible en `http://localhost:8080/swagger-ui` y accesible desde el menú lateral de la interfaz PrimeFaces (`template.xhtml`).
-- **Controladores Documentados:** Descubre automáticamente las anotaciones de [`ProductResource`](file:///home/avbravo/NetBeansProjects/jettrastack_local/JettraServer/JettraServerExamples/JettraServerExample/src/main/java/io/jettra/server/example/rest/ProductResource.java) y [`ServerInfoResource`](file:///home/avbravo/NetBeansProjects/jettrastack_local/JettraServer/JettraServerExamples/JettraServerExample/src/main/java/io/jettra/server/example/rest/ServerInfoResource.java).
+- **Controladores Documentados:** Descubre automáticamente las anotaciones de [`ProductResource`](file:///home/avbravo/NetBeansProjects/jettrastack_local/JettraServerExamples/JettraServerExample/src/main/java/io/jettra/server/example/rest/ProductResource.java) y [`ServerInfoResource`](file:///home/avbravo/NetBeansProjects/jettrastack_local/JettraServerExamples/JettraServerExample/src/main/java/io/jettra/server/example/rest/ServerInfoResource.java).
 - **Especificación OpenAPI 3.0.0:** Expuesta en `http://localhost:8080/openapi.json`.
 
 ---
@@ -377,7 +384,7 @@ Al arrancar, el servidor imprime su banner informativo indicando los hilos virtu
 
 ## 11. Contenedorización con Docker y Docker Compose (`bellsoft/liberica-runtime-container:jre-25-stream-musl`)
 
-Tanto [`JettraServerExample`](file:///home/avbravo/NetBeansProjects/jettrastack_local/JettraServer/JettraServerExamples/JettraServerExample) como [`JettraServerBackEndExample`](file:///home/avbravo/NetBeansProjects/jettrastack_local/JettraServer/JettraServerExamples/JettraServerBackEndExample) cuentan con soporte nativo de contenedorización de alto rendimiento basado en **Alpine Linux** con la biblioteca C estándar **musl** y el entorno de ejecución oficial **BellSoft Liberica JRE 25**.
+Tanto [`JettraServerExample`](file:///home/avbravo/NetBeansProjects/jettrastack_local/JettraServerExamples/JettraServerExample) como [`JettraServerBackEndExample`](file:///home/avbravo/NetBeansProjects/jettrastack_local/JettraServerExamples/JettraServerBackEndExample) cuentan con soporte nativo de contenedorización de alto rendimiento basado en **Alpine Linux** con la biblioteca C estándar **musl** y el entorno de ejecución oficial **BellSoft Liberica JRE 25**.
 
 ### 11.1. ¿Por qué `bellsoft/liberica-runtime-container:jre-25-stream-musl`?
 1. **Ultra-Bajo Consumo (Footprint Mínimo):** La imagen basada en musl reduce el tamaño base a menos de **90 MB**.
@@ -395,7 +402,7 @@ Se generan los archivos:
 - `target/JettraServerBackEndExample-1.0.0-SNAPSHOT-uber.jar` (Microservicios REST + Swagger-UI)
 
 ### 11.3. Archivo `Dockerfile` para `JettraServerExample`
-Ubicado en [`JettraServerExamples/JettraServerExample/Dockerfile`](file:///home/avbravo/NetBeansProjects/jettrastack_local/JettraServer/JettraServerExamples/JettraServerExample/Dockerfile):
+Ubicado en [`JettraServerExamples/JettraServerExample/Dockerfile`](file:///home/avbravo/NetBeansProjects/jettrastack_local/JettraServerExamples/JettraServerExample/Dockerfile):
 ```dockerfile
 # ==============================================================================
 # JettraServerExample - Jakarta EE 11, PrimeFaces 16 & JettraFlux
@@ -441,7 +448,7 @@ ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -jar /app/app.jar"]
 ```
 
 ### 11.4. Archivo `Dockerfile` para `JettraServerBackEndExample`
-Ubicado en [`JettraServerExamples/JettraServerBackEndExample/Dockerfile`](file:///home/avbravo/NetBeansProjects/jettrastack_local/JettraServer/JettraServerExamples/JettraServerBackEndExample/Dockerfile):
+Ubicado en [`JettraServerExamples/JettraServerBackEndExample/Dockerfile`](file:///home/avbravo/NetBeansProjects/jettrastack_local/JettraServerExamples/JettraServerBackEndExample/Dockerfile):
 ```dockerfile
 # ==============================================================================
 # JettraServerBackEndExample - Microservicios Backend con Java 25 & Project Loom
@@ -484,7 +491,7 @@ ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -jar /app/app.jar"]
 ### 11.5. Orquestación con `docker-compose.yml`
 
 #### A) Despliegue de `JettraServerExample`
-Ubicado en [`JettraServerExamples/JettraServerExample/docker-compose.yml`](file:///home/avbravo/NetBeansProjects/jettrastack_local/JettraServer/JettraServerExamples/JettraServerExample/docker-compose.yml):
+Ubicado en [`JettraServerExamples/JettraServerExample/docker-compose.yml`](file:///home/avbravo/NetBeansProjects/jettrastack_local/JettraServerExamples/JettraServerExample/docker-compose.yml):
 ```yaml
 version: '3.8'
 
@@ -519,7 +526,7 @@ volumes:
 ```
 
 #### B) Despliegue de `JettraServerBackEndExample`
-Ubicado en [`JettraServerExamples/JettraServerBackEndExample/docker-compose.yml`](file:///home/avbravo/NetBeansProjects/jettrastack_local/JettraServer/JettraServerExamples/JettraServerBackEndExample/docker-compose.yml):
+Ubicado en [`JettraServerExamples/JettraServerBackEndExample/docker-compose.yml`](file:///home/avbravo/NetBeansProjects/jettrastack_local/JettraServerExamples/JettraServerBackEndExample/docker-compose.yml):
 ```yaml
 version: '3.8'
 

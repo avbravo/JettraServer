@@ -42,12 +42,10 @@
         <dependency>
             <groupId>io.jettra</groupId>
             <artifactId>JettraRest</artifactId>
-            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>io.jettra</groupId>
             <artifactId>JettraAnnotation</artifactId>
-            <scope>provided</scope>
         </dependency>
 
         <!-- Motores de almacenamiento -->

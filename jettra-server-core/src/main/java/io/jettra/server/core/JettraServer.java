@@ -178,26 +178,21 @@ public class JettraServer {
             res.json(profile);
         });
 
-        // Listar usuarios (JettraSecurityDB)
-        router.get("/api/security/users", (req, res) -> {
-            var users = securityService.listUsers();
-            var result = users.stream().map(u -> {
-                Map<String, Object> map = new java.util.LinkedHashMap<>();
-                map.put("id", u.id().toString());
-                map.put("username", u.username());
-                map.put("email", u.email());
-                map.put("phone", u.phone());
-                map.put("active", u.active());
-                map.put("roles", u.jRoles() != null ? u.jRoles().stream().map(JRole::name).toList() : java.util.List.of());
-                return map;
-            }).toList();
-            res.json(result);
-        });
+        // Gestión Administrativa de JettraSecurityDB (Usuarios y Roles)
+        io.jettra.server.core.security.rest.SecurityManagementResource secResource =
+                new io.jettra.server.core.security.rest.SecurityManagementResource(securityService);
 
-        // Listar roles
-        router.get("/api/security/roles", (req, res) -> {
-            res.json(securityService.listRoles());
+        router.get("/api/security/users", secResource::listUsers);
+        router.post("/api/security/users", secResource::createUser);
+        router.delete("/api/security/users", secResource::deleteUser);
+        router.delete("/api/security/users/{username}", (req, res) -> {
+            secResource.deleteUserByUsername(req.getPathParam("username"), res);
         });
+        router.post("/api/security/users/role", secResource::updateRole);
+        router.post("/api/security/users/status", secResource::updateStatus);
+        router.post("/api/security/users/password", secResource::updatePassword);
+        router.get("/api/security/roles", secResource::listRoles);
+        router.post("/api/security/roles", secResource::createRole);
     }
 
     public JettraServer get(String path, HttpHandler handler) {
