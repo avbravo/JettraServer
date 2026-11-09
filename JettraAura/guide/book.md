@@ -454,6 +454,15 @@ public class Main {
 }
 ```
 
+### 7.4 Coexistencia con JettraFlux y Aislamiento de Plantillas en WebExample
+En el proyecto de referencia [`WebExample`](file:///home/avbravo/NetBeansProjects/jettrastack_local/jettraserverexamples/WebExample), JettraAura coexiste armónicamente con JettraFlux y Jakarta Faces, manteniendo un aislamiento arquitectónico estricto:
+
+1. **Área Suite JettraAura (`/aura/*` y `.xhtml`):** Emplea la plantilla `AuraTemplatePage` y el motor de emparejamiento 1:1 con marcado HTML/XHTML, utilizando `AuraModal` para ventanas emergentes de registro, edición y confirmación de baja con refresco parcial AJAX.
+2. **Área Ejemplos JettraFlux (`/flux/*`):** Emplea exclusivamente la plantilla [`FluxTemplateView`](file:///home/avbravo/NetBeansProjects/jettrastack_local/jettraserverexamples/WebExample/src/main/java/io/jettra/server/example/flux/FluxTemplateView.java), compuesta 100% por widgets de Java 25 puro (`Div`, `Row`, `Column`, `Header`, `Button`, `Link`, `Text`, `Badge`, `Paragraph`, `Modifier`, `RawHtml`) sin utilizar `StringBuilder`.
+3. **Área Jakarta Faces (`/dashboard.xhtml`, `/productos.xhtml`):** Conserva su propia plantilla empresarial `template.xhtml` basada en Facelets y PrimeFaces 14.
+
+Ningún cambio en el diseño de `FluxTemplateView` o en `AuraTemplatePage` afecta la representación visual ni el comportamiento de las demás áreas, garantizando la total independencia de cada tecnología dentro de un mismo servidor JettraServer.
+
 ---
 
 ## Capítulo 8: Integración con Eclipse MicroProfile y Jakarta EE

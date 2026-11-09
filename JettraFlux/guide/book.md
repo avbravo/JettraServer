@@ -185,3 +185,62 @@ A massive expansion of components was generated automatically to support full `J
 - **Base Components**: `Button`, `Calendar`, `CheckBoxGroup`, `Clock`, `FormGroup`, `RadioGroupButton`, `Script`, `Separator`, `Style`, `TD`, `TextBox`, `Time`.
 
 Each of these components has a corresponding `.md` file in `guide/examples/` (e.g., `guide/examples/avatar.md`) providing a basic starting point for usage.
+
+---
+
+## 7. Composición de Plantillas y Vistas Reactivas (`FluxView` y `FluxTemplateView`)
+
+JettraFlux adopta el paradigma declarativo y compositivo de **Flutter** y **Jetpack Compose** para la web corporativa en **Java 25+**.
+
+### 7.1 El Patrón `FluxView` y Composición de Árboles de Widgets
+En JettraFlux, las vistas complejas y plantillas heredan de `io.jettra.flux.core.FluxView`:
+- **Método `build()`:** Devuelve un árbol jerárquico de widgets puros (`Widget`).
+- **Cero `StringBuilder`:** La construcción del layout se realiza declarativamente anidando componentes (`Div`, `Row`, `Column`, `Header`, `Button`, `Link`, `Text`, `Badge`, `Paragraph`, `Modifier`, `RawHtml`). Se prohíbe el uso de `StringBuilder` o concatenaciones de strings HTML en la lógica de vistas para preservar la seguridad de tipos, el rendimiento y la legibilidad.
+- **Renderizado Automatizado:** El motor `FluxRenderer` procesa el árbol de widgets resultante y genera un documento HTML5 semántico con variables CSS de diseño y soporte para temas oscuros/claros sin requerir plantillas manuales.
+
+### 7.2 Ejemplo de Plantilla Reactiva (`FluxTemplateView`)
+Como se implementa en [`FluxTemplateView.java`](file:///home/avbravo/NetBeansProjects/jettrastack_local/jettraserverexamples/WebExample/src/main/java/io/jettra/server/example/flux/FluxTemplateView.java) de `WebExample`:
+
+```java
+public class FluxTemplateView extends FluxView {
+
+    private final String title;
+    private final Widget contentWidget;
+
+    public FluxTemplateView(String title, Widget contentWidget) {
+        this.title = title;
+        this.contentWidget = contentWidget;
+    }
+
+    @Override
+    public Widget build() {
+        Widget topbar = buildTopBar();
+        Widget sidebar = buildSidebar();
+        Widget center = Div.of(
+            Header.of(1, title),
+            Div.of(contentWidget).modifier(new Modifier().cssClass("flux-content-surface"))
+        ).modifier(new Modifier().cssClass("flux-layout-center"));
+
+        Widget layoutWrapper = Div.of(sidebar, center).modifier(new Modifier().cssClass("flux-layout-wrapper"));
+        Widget footer = buildFooter();
+
+        return Div.of(topbar, layoutWrapper, footer)
+            .modifier(new Modifier().cssClass("app-body flux-template-body"));
+    }
+}
+```
+
+---
+
+## 8. Relación entre JettraFlux y JettraAura
+
+El ecosistema Jettra proporciona dos motores frontend complementarios, ambos de código propio en Java 25 y con concurrencia nativa sobre hilos virtuales de Project Loom:
+
+| Característica | **JettraFlux** | **JettraAura** |
+| :--- | :--- | :--- |
+| **Paradigma** | Declarativo / Funcional Puro (Inspirado en Flutter / Compose) | Orientado a Componentes y Plantillas (Asociación 1:1) |
+| **Fuente de UI** | Código Java 25 puro (`Widget`, `FluxView`, `Modifier`) | Archivos estándar **HTML (`.html`)** o **Jakarta Faces (`.xhtml`)** |
+| **Identificación** | Estructura jerárquica de objetos | Atributos `aura:id` / `flux:id` en el marcado |
+| **Uso Principal** | Dashboards analíticos, Swagger-UI, monitores de servidor y telemetría | Aplicaciones empresariales con maquetación de diseñadores y formularios dinámicos |
+| **Interoperabilidad** | Puede incrustarse dentro de plantillas Aura mediante `AuraFluxWidget` | Implementa `JettraComponent` y convierte a `Widget` vía `.toFluxWidget()` |
+| **Dependencias** | **Cero dependencias externas**, 100% código propio | **Cero dependencias externas (sin Apache Wicket)**, 100% código propio |

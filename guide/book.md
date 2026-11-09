@@ -300,6 +300,21 @@ Para garantizar la mejor experiencia en cualquier resolución de pantalla (móvi
 - **Controladores Documentados:** Descubre automáticamente las anotaciones de [`ProductResource`](file:///home/avbravo/NetBeansProjects/jettrastack_local/jettraserverexamples/WebExample/src/main/java/io/jettra/server/example/rest/ProductResource.java) y [`ServerInfoResource`](file:///home/avbravo/NetBeansProjects/jettrastack_local/jettraserverexamples/WebExample/src/main/java/io/jettra/server/example/rest/ServerInfoResource.java).
 - **Especificación OpenAPI 3.0.0:** Expuesta en `http://localhost:8080/openapi.json`.
 
+### 8.3. Plantilla Exclusiva JettraFlux (`FluxTemplateView`) con Componentes Nativos
+Para el área de ejemplos reactivos de JettraFlux (`/flux/*`), `WebExample` incorpora una plantilla dedicada denominada [`FluxTemplateView`](file:///home/avbravo/NetBeansProjects/jettrastack_local/jettraserverexamples/WebExample/src/main/java/io/jettra/server/example/flux/FluxTemplateView.java):
+- **Cero `StringBuilder`:** La plantilla se construye íntegramente ensamblando un árbol jerárquico de widgets oficiales de JettraFlux (`Div`, `Row`, `Column`, `Header`, `Button`, `Link`, `Text`, `Badge`, `Paragraph`, `Modifier`, `RawHtml`). No recurre a `StringBuilder` ni a cadenas HTML dispersas.
+- **Aislamiento Total del Ecosistema:** Diseñada con el namespace visual `flux-template-body` y `JettraFlux Studio`, garantizando que las páginas de Jakarta Faces (`.xhtml`) y las de JettraAura (`/aura/*`) mantengan sus propias plantillas (`template.xhtml` y `AuraTemplatePage`) completamente intactas y sin colisión de estilos.
+- **Capacidades Integradas:** Barra superior con botón hamburguesa responsive, cambiador de temas Claro / Oscuro sincronizado mediante cookies y `localStorage`, insignias del modo de persistencia activo (`JVM_RAM`, `PANAMA_OFFHEAP`, `LSM_DISK`), barra de navegación por pestañas (*tabs*) y área central con tarjeta de superficie de contenido (`.flux-content-surface`).
+
+### 8.4. Suite JettraAura: Variante Optimizada de JettraFlux para HTML y XHTML
+JettraAura se integra en `WebExample` como una variante nativa, optimizada y simplificada de JettraFlux especialmente diseñada para interoperar con plantillas estándar **HTML (`.html`)** y páginas **Jakarta Faces (`.xhtml`)**:
+- **100% Código Propio:** Libre por completo de librerías externas o dependencias heredadas de Apache Wicket.
+- **Diálogos Modales Dinámicos (`AuraModal`):** Permite modales interactivos en Java puro para operaciones de registro (`registerModal`), edición (`productModal`) y confirmación de baja (`deleteModal`) con refresco parcial AJAX.
+- **Coexistencia Armónica:** En `WebExample`, coexisten tres motores de presentación de forma armónica:
+  1. *Jakarta Faces / PrimeFaces 14* en rutas `.xhtml` con plantilla `template.xhtml`.
+  2. *JettraFlux Reactivo Declarativo* en rutas `/flux/*` con plantilla exclusiva `FluxTemplateView`.
+  3. *Suite JettraAura* en rutas `/aura/*` y componentes dinámicos en `.xhtml` con plantilla `AuraTemplatePage`.
+
 ---
 
 ## 9. Framework de Pruebas JettraTest
