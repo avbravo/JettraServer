@@ -210,6 +210,26 @@ public class JettraAuraTest {
             JettraAssert.assertEquals(200, resRoot.statusCode(), "Root debe responder HTTP 200");
             JettraAssert.assertTrue(resRoot.body().contains("¡Bienvenido a JettraAura!"), "Root debe servir TestIndex");
 
+            // Petición a la ruta .xhtml (soporte nativo Jakarta Faces)
+            HttpRequest reqXhtml = HttpRequest.newBuilder()
+                .uri(URI.create("http://127.0.0.1:" + testPort + "/test-index.xhtml"))
+                .GET()
+                .build();
+            HttpResponse<String> resXhtml = client.send(reqXhtml, HttpResponse.BodyHandlers.ofString());
+            JettraAssert.assertEquals(200, resXhtml.statusCode(), "Ruta .xhtml debe responder HTTP 200");
+            JettraAssert.assertTrue(resXhtml.body().contains("¡Bienvenido a JettraAura!"), "Ruta .xhtml debe servir TestIndex");
+
+            // Petición AJAX POST verificando que el JSON no esté doblemente serializado
+            HttpRequest reqAjax = HttpRequest.newBuilder()
+                .uri(URI.create("http://127.0.0.1:" + testPort + "/test-index"))
+                .header("Content-Type", "application/x-www-form-urlencoded")
+                .header("X-Requested-With", "XMLHttpRequest")
+                .POST(HttpRequest.BodyPublishers.ofString("aura%3Aajax=true&aura%3Atarget=welcomeMsg&aura%3Aevent=click"))
+                .build();
+            HttpResponse<String> resAjax = client.send(reqAjax, HttpResponse.BodyHandlers.ofString());
+            JettraAssert.assertEquals(200, resAjax.statusCode(), "AJAX POST debe responder HTTP 200");
+            JettraAssert.assertTrue(resAjax.body().trim().startsWith("{\"updates\":"), "La respuesta AJAX debe ser un objeto JSON directo y no un string escapado");
+
         } finally {
             server.stop();
         }
@@ -249,6 +269,34 @@ public class JettraAuraTest {
         JettraAssert.assertTrue(modalHtml.contains("Confirmar Acción"), "El modal debe renderizar el título");
         JettraAssert.assertTrue(modalHtml.contains("¿Desea continuar?"), "El modal debe renderizar sus componentes hijos");
         JettraAssert.assertTrue(modalHtml.contains("display: flex;"), "El modal abierto debe tener display: flex");
+    }
+
+    @Test
+    @DisplayName("9. Verificar interoperabilidad JettraFlux (flux:id, AuraFluxWidget y toFluxWidget)")
+    public void testJettraFluxInteroperability() {
+        io.jettra.aura.core.AuraContainer root = new io.jettra.aura.core.AuraContainer("root");
+        AuraLabel fluxLabel = new AuraLabel("fluxTitle", "Título vinculado con flux:id");
+        io.jettra.aura.components.AuraFluxWidget embeddedFlux = new io.jettra.aura.components.AuraFluxWidget(
+                "embeddedWidget",
+                io.jettra.flux.widgets.Badge.of("Badge Nativo JettraFlux", "success")
+        );
+        root.add(fluxLabel, embeddedFlux);
+
+        String xhtmlTemplate = """
+            <div class="xhtml-view">
+                <h2 flux:id="fluxTitle">Placeholder</h2>
+                <div flux:id="embeddedWidget"></div>
+            </div>
+            """;
+
+        String rendered = AuraTemplateParser.parse(xhtmlTemplate).render(root);
+        JettraAssert.assertTrue(rendered.contains("Título vinculado con flux:id"), "Debe vincular etiqueta con flux:id");
+        JettraAssert.assertTrue(rendered.contains("Badge Nativo JettraFlux"), "AuraFluxWidget debe renderizar el Widget de JettraFlux");
+
+        // Convertir un AuraComponent a Widget de JettraFlux
+        io.jettra.flux.core.Widget asWidget = fluxLabel.toFluxWidget("span");
+        String widgetHtml = asWidget.render(io.jettra.flux.theme.Themes.Core());
+        JettraAssert.assertTrue(widgetHtml.contains("Título vinculado con flux:id"), "toFluxWidget debe renderizar el componente Aura dentro de JettraFlux");
     }
 }
 

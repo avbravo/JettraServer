@@ -183,7 +183,28 @@ public class AuraPage extends AuraContainer {
     }
 
     /**
-     * Renderiza un único componente dentro del contexto de la plantilla HTML de esta página.
+     * Renderiza únicamente el fragmento de contenido de esta página junto con el runtime JS de JettraAura,
+     * ideal para incrustarse dentro de páginas Jakarta Faces (.xhtml) o contenedores JettraFlux.
+     */
+    public String renderSection() {
+        autoBindAnnotatedComponents();
+        onInitialize();
+        onConfigure();
+        onBeforeRender();
+
+        String sectionHtml = AuraTemplateLocator.loadSectionTemplate(getClass());
+        AuraMarkupDocument document = AuraTemplateParser.parse(sectionHtml);
+        String renderedSection = document.render(this);
+        detach();
+
+        if (!renderedSection.contains("id=\"jettra-aura-runtime\"")) {
+            return renderedSection + "\n" + getAuraClientScript();
+        }
+        return renderedSection;
+    }
+
+    /**
+     * Renderiza un único componente dentro del contexto de la plantilla HTML/XHTML de esta página.
      * Utilizado por {@link AuraAjaxRequestTarget} para refrescar contenedores, tablas o diálogos.
      */
     public String renderComponent(AuraComponent component) {
@@ -274,14 +295,16 @@ public class AuraPage extends AuraContainer {
         return html.replace("</head>", headerInjection + "</head>");
     }
 
-    private static String getAuraClientScript() {
+    public static String getAuraClientScript() {
         return """
           <script id="jettra-aura-runtime">
             function auraAjax(componentId, eventType, extraParams, triggerEl) {
               const url = window.location.pathname;
               const formData = new URLSearchParams(extraParams || {});
 
-              let el = triggerEl || document.querySelector('[data-aura-path="' + componentId + '"]') || document.getElementById('aura-' + componentId.replace(/:/g, '-'));
+              let el = triggerEl
+                || document.querySelector('[data-aura-path="' + componentId + '"]')
+                || document.getElementById('aura-' + componentId.replace(/:/g, '-'));
               let form = el ? el.closest('form') : null;
               if (form) {
                 const fd = new FormData(form);
@@ -303,13 +326,21 @@ public class AuraPage extends AuraContainer {
               })
               .then(r => r.json())
               .then(data => {
+                if (typeof data === 'string') {
+                  try { data = JSON.parse(data); } catch (e) {}
+                }
+                if (!data) return;
                 if (data.redirect) {
                   window.location.href = data.redirect;
                   return;
                 }
                 if (data.updates) {
                   for (const [id, html] of Object.entries(data.updates)) {
-                    const targetEl = document.getElementById(id) || document.querySelector('[aura\\\\:id="' + id + '"]');
+                    const targetEl = document.getElementById(id)
+                      || document.querySelector('[aura\\\\:id="' + id + '"]')
+                      || document.querySelector('[flux\\\\:id="' + id + '"]')
+                      || document.querySelector('[data-aura-id="' + id + '"]')
+                      || document.querySelector('[data-flux-id="' + id + '"]');
                     if (targetEl) {
                       const temp = document.createElement('div');
                       temp.innerHTML = html.trim();
@@ -330,6 +361,8 @@ public class AuraPage extends AuraContainer {
               .catch(err => console.error('Aura AJAX Error:', err));
             }
 
+            const fluxAjax = auraAjax;
+
             function auraCloseModal(markupId, componentPath) {
               const el = document.getElementById(markupId);
               if (el) el.style.display = 'none';
@@ -337,6 +370,20 @@ public class AuraPage extends AuraContainer {
                 auraAjax(componentPath, 'close');
               }
             }
+
+            const fluxCloseModal = auraCloseModal;
+
+            document.addEventListener('keydown', function(evt) {
+              if (evt.key === 'Escape') {
+                const openModals = document.querySelectorAll('.aura-modal-backdrop');
+                openModals.forEach(function(m) {
+                  if (m.style.display !== 'none') {
+                    const path = m.getAttribute('data-aura-path');
+                    auraCloseModal(m.id, path);
+                  }
+                });
+              }
+            });
           </script>
         """;
     }

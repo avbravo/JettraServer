@@ -83,9 +83,11 @@ public class AuraHandler {
         }
 
         // 3. Obtener o instanciar la página manteniendo estado de componentes en la sesión
-        AuraPage page = session.getPage(uri);
+        String pageKey = normalizePageKey(uri, pageClass);
+        AuraPage page = session.getPage(pageKey);
         if (page == null || !pageClass.isInstance(page)) {
             page = application.newPageInstance(pageClass);
+            session.putPage(pageKey, page);
             session.putPage(uri, page);
         }
         page.setRequest(auraReq);
@@ -96,37 +98,23 @@ public class AuraHandler {
         try {
             // 4. Manejo de Peticiones Ajax
             if (auraReq.isAjax()) {
-                handleAjaxRequest(page, auraReq, auraRes, res);
+                String jsonResponse = processAjaxRequest(page, auraReq, auraRes);
+                res.status(HttpStatus.OK).contentType("application/json; charset=UTF-8").body(jsonResponse);
                 return;
             }
 
             // 5. Manejo de Peticiones POST (Formularios y Botones)
             if (auraReq.isPost()) {
-                handleFormPost(page, auraReq, auraRes);
+                processFormPost(page, auraReq, auraRes);
                 if (auraRes.isRedirect()) {
                     res.status(HttpStatus.FOUND).header("Location", auraRes.getRedirectLocation()).body("");
                     return;
                 }
             } else {
-                // Manejo de eventos de click por GET (enlaces o botones con aura:target)
-                String targetId = auraReq.getParameter("aura:target");
-                if (targetId != null) {
-                    String eventType = auraReq.getParameter("aura:event");
-                    if (eventType == null || eventType.isBlank()) eventType = "click";
-                    AuraComponent comp = page.get(targetId);
-                    if (comp != null) {
-                        if (comp instanceof AuraLink link) {
-                            link.onClick();
-                        } else if (comp instanceof AuraButton btn) {
-                            btn.onSubmit();
-                        }
-                        comp.fireEvent(new AuraEvent(comp, eventType, auraReq, auraRes, null));
-                    }
-                    page.invokeAuraAction(targetId, auraReq, auraRes, null);
-                    if (auraRes.isRedirect()) {
-                        res.status(HttpStatus.FOUND).header("Location", auraRes.getRedirectLocation()).body("");
-                        return;
-                    }
+                processGetEvent(page, auraReq, auraRes);
+                if (auraRes.isRedirect()) {
+                    res.status(HttpStatus.FOUND).header("Location", auraRes.getRedirectLocation()).body("");
+                    return;
                 }
             }
 
@@ -139,10 +127,50 @@ public class AuraHandler {
         }
     }
 
-    private void handleAjaxRequest(AuraPage page, AuraRequest auraReq, AuraResponse auraRes, HttpResponse res) {
+    public static String normalizePageKey(String uri, Class<? extends AuraPage> pageClass) {
+        if (pageClass != null) {
+            return pageClass.getName();
+        }
+        if (uri == null) return "";
+        if (uri.endsWith(".xhtml")) return uri.substring(0, uri.length() - 6);
+        if (uri.endsWith(".html")) return uri.substring(0, uri.length() - 5);
+        return uri;
+    }
+
+    public static void processGetEvent(AuraPage page, AuraRequest auraReq, AuraResponse auraRes) {
+        String targetId = auraReq.getParameter("aura:target");
+        if (targetId == null) {
+            targetId = auraReq.getParameter("flux:target");
+        }
+        if (targetId != null) {
+            String eventType = auraReq.getParameter("aura:event");
+            if (eventType == null || eventType.isBlank()) {
+                eventType = auraReq.getParameter("flux:event");
+            }
+            if (eventType == null || eventType.isBlank()) eventType = "click";
+            AuraComponent comp = page.get(targetId);
+            if (comp != null) {
+                if (comp instanceof AuraLink link) {
+                    link.onClick();
+                } else if (comp instanceof AuraButton btn) {
+                    btn.onSubmit();
+                }
+                comp.fireEvent(new AuraEvent(comp, eventType, auraReq, auraRes, null));
+            }
+            page.invokeAuraAction(targetId, auraReq, auraRes, null);
+        }
+    }
+
+    public static String processAjaxRequest(AuraPage page, AuraRequest auraReq, AuraResponse auraRes) {
         AuraAjaxRequestTarget target = new AuraAjaxRequestTarget(page);
         String targetId = auraReq.getParameter("aura:target");
+        if (targetId == null) {
+            targetId = auraReq.getParameter("flux:target");
+        }
         String eventType = auraReq.getParameter("aura:event");
+        if (eventType == null || eventType.isBlank()) {
+            eventType = auraReq.getParameter("flux:event");
+        }
         if (eventType == null || eventType.isBlank()) {
             eventType = "click";
         }
@@ -183,13 +211,18 @@ public class AuraHandler {
             target.redirect(auraRes.getRedirectLocation());
         }
 
-        String jsonResponse = target.toJson();
-        res.status(HttpStatus.OK).json(jsonResponse);
+        return target.toJson();
     }
 
-    private void handleFormPost(AuraPage page, AuraRequest auraReq, AuraResponse auraRes) {
+    public static void processFormPost(AuraPage page, AuraRequest auraReq, AuraResponse auraRes) {
         String targetId = auraReq.getParameter("aura:target");
+        if (targetId == null) {
+            targetId = auraReq.getParameter("flux:target");
+        }
         String eventType = auraReq.getParameter("aura:event");
+        if (eventType == null || eventType.isBlank()) {
+            eventType = auraReq.getParameter("flux:event");
+        }
         if (eventType == null || eventType.isBlank()) {
             eventType = "submit";
         }
@@ -237,7 +270,7 @@ public class AuraHandler {
         }
     }
 
-    private AuraForm<?> findSubmittedForm(AuraContainer container, AuraRequest req) {
+    private static AuraForm<?> findSubmittedForm(AuraContainer container, AuraRequest req) {
         AuraForm<?> firstForm = null;
         for (AuraComponent comp : container.getChildren()) {
             if (comp instanceof AuraForm<?> form) {
@@ -253,7 +286,7 @@ public class AuraHandler {
         return firstForm;
     }
 
-    private boolean hasMatchingInput(AuraContainer container, AuraRequest req) {
+    private static boolean hasMatchingInput(AuraContainer container, AuraRequest req) {
         for (AuraComponent child : container.getChildren()) {
             if (req.getParameters().containsKey(child.getPath()) || req.getParameters().containsKey(child.getId())) {
                 return true;

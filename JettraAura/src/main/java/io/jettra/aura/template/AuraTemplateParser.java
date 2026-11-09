@@ -10,8 +10,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Analizador sintáctico HTML de alto rendimiento para JettraAura.
- * Detecta etiquetas con identificadores (aura:id, j:id, data-aura-id) y construye
+ * Analizador sintáctico HTML/XHTML de alto rendimiento para JettraAura.
+ * Detecta etiquetas con identificadores (aura:id, flux:id, j:id, data-aura-id, data-flux-id) y construye
  * un árbol de nodos reutilizable en memoria para máxima velocidad bajo Java 25 y Project Loom.
  */
 public class AuraTemplateParser {
@@ -186,8 +186,10 @@ public class AuraTemplateParser {
 
     private static String extractAuraId(AuraTag tag) {
         String val = tag.getAttribute("aura:id");
+        if (val == null) val = tag.getAttribute("flux:id");
         if (val == null) val = tag.getAttribute("j:id");
         if (val == null) val = tag.getAttribute("data-aura-id");
+        if (val == null) val = tag.getAttribute("data-flux-id");
         return val;
     }
 }

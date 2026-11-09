@@ -4,6 +4,9 @@ import io.jettra.aura.ajax.AuraAjaxRequestTarget;
 import io.jettra.aura.model.CompoundPropertyModel;
 import io.jettra.aura.model.IModel;
 import io.jettra.aura.model.Model;
+import io.jettra.flux.core.JettraComponent;
+import io.jettra.flux.core.Widget;
+import io.jettra.flux.theme.ThemeData;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -13,10 +16,11 @@ import java.util.function.Consumer;
 
 /**
  * Clase base para todos los componentes de la interfaz de usuario en JettraAura.
- * Cada componente se asocia con un elemento del archivo HTML marcado con aura:id.
+ * Variante optimizada y simplificada de JettraFlux para vincular componentes Java 1:1
+ * con elementos en plantillas HTML (.html) y Jakarta Faces (.xhtml) mediante aura:id o flux:id.
  * Gestiona ciclo de vida, modelos, atributos HTML, visibilidad y control de eventos.
  */
-public abstract class AuraComponent implements Serializable {
+public abstract class AuraComponent implements JettraComponent, Serializable {
 
     private final String id;
     private AuraContainer parent;
@@ -42,8 +46,74 @@ public abstract class AuraComponent implements Serializable {
         this.model = model;
     }
 
+    @Override
     public String getId() {
         return id;
+    }
+
+    public String getComponentType() {
+        return getClass().getSimpleName();
+    }
+
+    @Override
+    public String render(ThemeData theme) {
+        if (this instanceof AuraPage auraPage) {
+            return auraPage.renderSection();
+        }
+        AuraPage parentPage = getPage();
+        if (parentPage != null) {
+            String rendered = parentPage.renderComponent(this);
+            if (rendered != null && !rendered.isBlank()) {
+                return rendered;
+            }
+        }
+        AuraTag tag = new AuraTag("div");
+        tag.setAuraId(this.id);
+        StringBuilder sb = new StringBuilder();
+        render(tag, "", sb);
+        return sb.toString();
+    }
+
+    /**
+     * Convierte este componente Aura en un {@link Widget} de JettraFlux para integrarlo
+     * de forma transparente dentro de vistas programáticas JettraFlux o puentes Jakarta Faces.
+     */
+    public Widget toFluxWidget() {
+        return toFluxWidget("div");
+    }
+
+    /**
+     * Convierte este componente Aura en un {@link Widget} de JettraFlux usando la etiqueta HTML indicada.
+     */
+    public Widget toFluxWidget(String tagName) {
+        final AuraComponent self = this;
+        return new Widget() {
+            {
+                this.id = self.getMarkupId();
+            }
+
+            @Override
+            public String render(ThemeData theme) {
+                if ("div".equalsIgnoreCase(tagName)) {
+                    return self.render(theme);
+                }
+                if (self instanceof AuraPage auraPage) {
+                    return auraPage.renderSection();
+                }
+                AuraPage parentPage = self.getPage();
+                if (parentPage != null) {
+                    String rendered = parentPage.renderComponent(self);
+                    if (rendered != null && !rendered.isBlank()) {
+                        return rendered;
+                    }
+                }
+                AuraTag tag = new AuraTag(tagName != null && !tagName.isBlank() ? tagName : "div");
+                tag.setAuraId(self.getId());
+                StringBuilder sb = new StringBuilder();
+                self.render(tag, "", sb);
+                return sb.toString();
+            }
+        };
     }
 
     public AuraContainer getParent() {

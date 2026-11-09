@@ -9,21 +9,27 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Localizador y cargador de plantillas HTML para componentes y páginas JettraAura.
- * Aplica convención 1:1 Index.java busca Index.html en el mismo paquete,
- * en resources/templates, resources/webapp o en la ruta especificada por @AuraTemplate.
+ * Localizador y cargador de plantillas HTML (.html) y Jakarta Faces (.xhtml) para componentes y páginas JettraAura.
+ * Aplica convención 1:1 (ej. Index.java busca Index.html o Index.xhtml en el mismo paquete,
+ * en resources/templates, resources/webapp, resources/faces o en la ruta especificada por @AuraTemplate).
+ * Soporta herencia de plantillas mediante &lt;aura:extend&gt;, &lt;flux:extend&gt;, &lt;j:extend&gt; y &lt;ui:composition&gt;.
  */
 public class AuraTemplateLocator {
 
     private static final Map<Class<?>, String> TEMPLATE_CACHE = new ConcurrentHashMap<>();
 
     private static final java.util.regex.Pattern EXTEND_PATTERN = java.util.regex.Pattern.compile(
-        "<(?:aura|j):extend>(.*?)</(?:aura|j):extend>",
+        "<(?:aura|flux|j):extend>(.*?)</(?:aura|flux|j):extend>|<ui:composition[^>]*>(.*?)</ui:composition>",
         java.util.regex.Pattern.DOTALL | java.util.regex.Pattern.CASE_INSENSITIVE
     );
 
     private static final java.util.regex.Pattern CHILD_PATTERN = java.util.regex.Pattern.compile(
-        "<(?:aura|j):child\\s*(?:/>|>\\s*</(?:aura|j):child>)",
+        "<(?:aura|flux|j):child\\s*(?:/>|>\\s*</(?:aura|flux|j):child>)|<ui:insert[^>]*?(?:/>|>.*?</ui:insert>)",
+        java.util.regex.Pattern.DOTALL | java.util.regex.Pattern.CASE_INSENSITIVE
+    );
+
+    private static final java.util.regex.Pattern BODY_PATTERN = java.util.regex.Pattern.compile(
+        "<body[^>]*>(.*?)</body>",
         java.util.regex.Pattern.DOTALL | java.util.regex.Pattern.CASE_INSENSITIVE
     );
 
@@ -44,6 +50,28 @@ public class AuraTemplateLocator {
         });
     }
 
+    /**
+     * Carga únicamente el fragmento de contenido propio de la clase (sin el layout padre),
+     * ideal para incrustar vistas JettraAura dentro de plantillas Jakarta Faces (.xhtml).
+     */
+    public static String loadSectionTemplate(Class<?> componentClass) {
+        if (componentClass == null) return "";
+        String raw = doFindTemplate(componentClass);
+        if (raw == null) {
+            raw = createDefaultTemplate(componentClass);
+        }
+        java.util.regex.Matcher extendMatcher = EXTEND_PATTERN.matcher(raw);
+        if (extendMatcher.find()) {
+            String g1 = extendMatcher.group(1);
+            return g1 != null ? g1 : extendMatcher.group(2);
+        }
+        java.util.regex.Matcher bodyMatcher = BODY_PATTERN.matcher(raw);
+        if (bodyMatcher.find()) {
+            return bodyMatcher.group(1);
+        }
+        return raw;
+    }
+
     private static String doFindTemplate(Class<?> clazz) {
         // 1. Verificar anotación @AuraTemplate explícita
         AuraTemplate annotation = clazz.getAnnotation(AuraTemplate.class);
@@ -53,21 +81,35 @@ public class AuraTemplateLocator {
             if (content != null) return content;
         }
 
-        // 2. Convención 1:1 - Mismo nombre junto a la clase Java en el classpath
+        // 2. Convención 1:1 - Mismo nombre junto a la clase Java (.html o .xhtml)
         String simpleName = clazz.getSimpleName();
+        String camelName = Character.toLowerCase(simpleName.charAt(0)) + simpleName.substring(1);
+        String lowerName = simpleName.toLowerCase();
         String packagePath = clazz.getPackageName().replace('.', '/');
 
         String[] candidates = {
             packagePath + "/" + simpleName + ".html",
-            packagePath + "/" + Character.toLowerCase(simpleName.charAt(0)) + simpleName.substring(1) + ".html",
+            packagePath + "/" + simpleName + ".xhtml",
+            packagePath + "/" + camelName + ".html",
+            packagePath + "/" + camelName + ".xhtml",
             "templates/" + simpleName + ".html",
-            "templates/" + simpleName.toLowerCase() + ".html",
+            "templates/" + simpleName + ".xhtml",
+            "templates/" + lowerName + ".html",
+            "templates/" + lowerName + ".xhtml",
+            "faces/" + simpleName + ".xhtml",
+            "faces/" + lowerName + ".xhtml",
             "webapp/" + simpleName + ".html",
-            "webapp/" + simpleName.toLowerCase() + ".html",
+            "webapp/" + simpleName + ".xhtml",
+            "webapp/" + lowerName + ".html",
+            "webapp/" + lowerName + ".xhtml",
             "pages/" + simpleName + ".html",
-            "pages/" + simpleName.toLowerCase() + ".html",
+            "pages/" + simpleName + ".xhtml",
+            "pages/" + lowerName + ".html",
+            "pages/" + lowerName + ".xhtml",
             simpleName + ".html",
-            simpleName.toLowerCase() + ".html"
+            simpleName + ".xhtml",
+            lowerName + ".html",
+            lowerName + ".xhtml"
         };
 
         for (String candidate : candidates) {
@@ -85,7 +127,7 @@ public class AuraTemplateLocator {
 
         java.util.regex.Matcher extendMatcher = EXTEND_PATTERN.matcher(template);
         if (extendMatcher.find()) {
-            String childBody = extendMatcher.group(1);
+            String childBody = extendMatcher.group(1) != null ? extendMatcher.group(1) : extendMatcher.group(2);
             Class<?> superClass = clazz.getSuperclass();
 
             if (superClass != null && superClass != Object.class && superClass != io.jettra.aura.core.AuraPage.class && superClass != io.jettra.aura.core.AuraWebPage.class) {

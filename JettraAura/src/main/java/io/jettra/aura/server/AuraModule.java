@@ -71,9 +71,11 @@ public class AuraModule {
         HttpHandler h = handler::handle;
         server.get(path, h);
         server.post(path, h);
-        if (!path.endsWith(".html") && !"/".equals(path)) {
+        if (!path.endsWith(".html") && !path.endsWith(".xhtml") && !"/".equals(path)) {
             server.get(path + ".html", h);
             server.post(path + ".html", h);
+            server.get(path + ".xhtml", h);
+            server.post(path + ".xhtml", h);
         }
     }
 }

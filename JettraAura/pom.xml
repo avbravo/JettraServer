@@ -14,7 +14,7 @@
     <artifactId>JettraAura</artifactId>
     <packaging>jar</packaging>
     <name>JettraAura</name>
-    <description>Framework Web Moderno Basado en Componentes y Asociación 1:1 Java-HTML  para JettraServer, Jakarta EE y MicroProfile</description>
+    <description>Variante optimizada y simplificada de JettraFlux para integración directa en páginas HTML (.html) y Jakarta Faces (.xhtml) sobre JettraServer, Jakarta EE y MicroProfile</description>
 
     <dependencies>
         <dependency>
@@ -25,6 +25,11 @@
         <dependency>
             <groupId>io.jettra</groupId>
             <artifactId>jettra-server-jakarta</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.jettra</groupId>
+            <artifactId>JettraFlux</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>

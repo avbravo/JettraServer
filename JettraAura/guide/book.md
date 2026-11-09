@@ -28,7 +28,7 @@
 ## Capítulo 1: Introducción y Manifiesto de JettraAura
 
 ### 1.1 ¿Qué es JettraAura?
-**JettraAura** es un framework web orientado a componentes para la plataforma Java, rediseñado desde sus cimientos para aprovechar las capacidades de **Java 25+**, los hilos virtuales de **Project Loom**, el motor de almacenamiento desacoplado de **JettraServer** (Memoria Panamá FFM Off-Heap y LSM Disk) y el ecosistema visual de **JettraFlux**.
+**JettraAura** es una variante propia, optimizada y simplificada de **JettraFlux** diseñada específicamente para integrar componentes reactivos de Java 25+ directamente en páginas **HTML (`.html`)** y **Jakarta Faces (`.xhtml`)**. Aprovecha los hilos virtuales de **Project Loom**, el motor de almacenamiento desacoplado de **JettraServer** (Memoria Panamá FFM Off-Heap y LSM Disk) y la jerarquía nativa `JettraComponent` / `Widget` de **JettraFlux**, siendo **100% código propio libre de frameworks externos**.
 
 En el panorama actual del desarrollo web, los desarrolladores a menudo se ven obligados a elegir entre dos extremos:
 1. Frameworks de servidor basados en lenguajes de plantillas con sintaxis compleja embebida en el HTML (`${...}`, tags JSP/JSF ilegibles, directivas Thymeleaf engorrosas).
@@ -47,10 +47,11 @@ flowchart LR
 ```
 
 ### 1.2 Principios Fundamentales
-1. **Separación Absoluta:** Cero código Java ni expresiones dentro del HTML. Los componentes se vinculan mediante el atributo `aura:id` (o sus alias `j:id`,  `data-aura-id`).
-2. **Asociación 1:1:** Cada página HTML está emparejada con una clase Java homónima ubicada en el mismo paquete o ruta de recursos (ejemplo: `ClientePage.html` $\leftrightarrow$ `ClientePage.java`).
-3. **Manejo Transparente de Memoria:** A través de la abstracción `IModel<T>` y `LoadableDetachableModel<T>`, los datos pesados se desacoplan automáticamente al final de cada ciclo de renderizado, evitando la retención accidental de memoria y garantizando un consumo mínimo de RAM.
-4. **Concurrencia Escala Loom:** JettraAura procesa cada solicitud HTTP dentro de un Virtual Thread de Java 25, permitiendo atender cientos de miles de conexiones concurrentes sin bloquear hilos del sistema operativo.
+1. **Separación Absoluta (HTML y XHTML):** Cero código Java ni expresiones complejas dentro de `.html` o `.xhtml`. Los componentes se vinculan mediante los atributos `aura:id` o `flux:id` (o sus alias `j:id`, `data-aura-id`, `data-flux-id`).
+2. **Asociación 1:1 y Compatibilidad Jakarta Faces:** Cada plantilla `.html` o `.xhtml` se empareja con una clase Java homónima ubicada en el mismo paquete o ruta de recursos (`ClientePage.html` o `ClientePage.xhtml` $\leftrightarrow$ `ClientePage.java`), soportando además `<aura:extend>`, `<flux:extend>` y `<ui:composition>`.
+3. **Interoperabilidad Nativa con JettraFlux:** Todo `AuraComponent` implementa `io.jettra.flux.core.JettraComponent` y ofrece `toFluxWidget()`, mientras que `AuraFluxWidget` permite incrustar cualquier `Widget` o `FluxView` de JettraFlux dentro de una plantilla `.html` o `.xhtml`.
+4. **Manejo Transparente de Memoria:** A través de la abstracción `IModel<T>` y `LoadableDetachableModel<T>`, los datos pesados se desacoplan automáticamente al final de cada ciclo de renderizado.
+5. **Concurrencia Escala Loom:** JettraAura procesa cada solicitud HTTP y cada evento AJAX dentro de un Virtual Thread de Java 25.
 
 ---
 
@@ -354,9 +355,38 @@ add(new AuraListView<Producto>("filasProductos", lista, item -> {
 }));
 ```
 
+### 5.6 Ventanas Modales Interactivas (`AuraModal`) e Interoperabilidad `AuraFluxWidget`
+
+#### `AuraModal` (Diálogos para Registrar, Editar y Confirmar Eliminación)
+`AuraModal` es un contenedor reactivo (`AuraContainer`) que permite anidar formularios (`AuraForm`), etiquetas (`AuraLabel`) y botones AJAX (`AuraAjaxButton`) para construir diálogos modales de:
+- **Registro de datos** (`registerModal.show(target)`)
+- **Edición de registros** (`productModal.show(target)`)
+- **Confirmación de eliminación** (`deleteModal.show(target)`)
+
+```java
+AuraModal deleteModal = new AuraModal("deleteModal", "🗑️ Confirmar Eliminación");
+deleteModal.add(new AuraLabel("deleteConfirmMessage", () -> "¿Eliminar " + seleccionado.getNombre() + "?"));
+deleteModal.add(new AuraAjaxButton("btnConfirmDelete", target -> {
+    servicio.eliminar(seleccionado.getId());
+    deleteModal.hide(target);
+    target.add(feedbackPanel, tablaContainer);
+}));
+add(deleteModal);
+```
+
+#### `AuraFluxWidget` y `AuraFacesBridge`
+Permiten combinar widgets programáticos de `JettraFlux` con plantillas `.html` y `.xhtml` de Jakarta Faces:
+```java
+// Incrustar un Widget de JettraFlux en una plantilla .html / .xhtml (<div flux:id="badgeEstado"></div>)
+add(new AuraFluxWidget("badgeEstado", Badge.of("Activo en JPA", "success")));
+
+// O renderizar una sección de AuraPage dentro de un Servlet Jakarta Faces (.xhtml)
+String sectionHtml = AuraFacesBridge.renderSection(auraCatalogPage);
+```
+
 ---
 
-## Capítulo 6: Reactividad y Motor Ajax Parcial
+## Capítulo 6: Reactividad, Control de Eventos y Motor Ajax Parcial
 
 JettraAura incluye un motor de reactividad parcial en tiempo real. En lugar de recargar la página entera, las acciones Ajax ejecutan métodos Java en el servidor y devuelven una carga JSON quirúrgica con únicamente los nodos HTML que cambiaron.
 
@@ -766,10 +796,11 @@ public class App {
 ## Capítulo 10: Buenas Prácticas y Referencia Rápida
 
 ### 10.1 Resumen de Identificadores Soportados
-Cualquiera de los siguientes atributos puede utilizarse en el marcado HTML para vincular un componente Java:
-- `aura:id="miComponente"` (Predilecto oficial de JettraAura)
+Cualquiera de los siguientes atributos puede utilizarse en el marcado `.html` o `.xhtml` para vincular un componente Java:
+- `aura:id="miComponente"` (Predilecto de JettraAura)
+- `flux:id="miComponente"` (Sintaxis unificada JettraFlux para plantillas)
 - `j:id="miComponente"` (Sintaxis Jettra Frameworks)
-- `data-aura-id="miComponente"` (Marcado HTML5 estricto para validadores W3C)
+- `data-aura-id="miComponente"` / `data-flux-id="miComponente"` (Marcado HTML5 estricto para validadores W3C)
 
 ### 10.2 Reglas de Oro de JettraAura
 1. **Nunca mantengas entidades Hibernate o conexiones abiertas en el estado del componente:** Utiliza `LoadableDetachableModel` para recargar entidades al renderizar y desacoplarlas al terminar la petición.

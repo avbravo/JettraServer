@@ -80,6 +80,7 @@ public class AuraRequest implements Serializable {
     public boolean isAjax() {
         return "XMLHttpRequest".equalsIgnoreCase(getHeader("X-Requested-With")) ||
                "true".equalsIgnoreCase(getParameter("aura:ajax")) ||
+               "true".equalsIgnoreCase(getParameter("flux:ajax")) ||
                "true".equalsIgnoreCase(getParameter("ajax"));
     }
 }

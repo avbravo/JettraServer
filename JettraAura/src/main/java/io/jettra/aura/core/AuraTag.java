@@ -115,8 +115,10 @@ public class AuraTag implements Serializable {
 
     private static boolean isInternalAuraAttribute(String attr) {
         return "aura:id".equalsIgnoreCase(attr) ||
+               "flux:id".equalsIgnoreCase(attr) ||
                "j:id".equalsIgnoreCase(attr) ||
-               "data-aura-id".equalsIgnoreCase(attr);
+               "data-aura-id".equalsIgnoreCase(attr) ||
+               "data-flux-id".equalsIgnoreCase(attr);
     }
 
     private static String escapeAttribute(String s) {

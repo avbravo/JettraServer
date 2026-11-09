@@ -26,6 +26,10 @@ public class AuraSession implements Serializable {
     private static final Map<String, AuraSession> SESSION_STORE = new ConcurrentHashMap<>();
     private static final AuraSession DEFAULT_SHARED_SESSION = new AuraSession("default-aura-session");
 
+    static {
+        SESSION_STORE.put(DEFAULT_SHARED_SESSION.getId(), DEFAULT_SHARED_SESSION);
+    }
+
     private final String id;
     private String user;
     private Set<String> roles = Collections.emptySet();
@@ -51,10 +55,11 @@ public class AuraSession implements Serializable {
     }
 
     public static AuraSession resolve(String sessionId) {
-        if (sessionId != null && !sessionId.isBlank()) {
-            return SESSION_STORE.computeIfAbsent(sessionId, AuraSession::new);
+        if (sessionId == null || sessionId.isBlank() || DEFAULT_SHARED_SESSION.getId().equals(sessionId)) {
+            SESSION_STORE.putIfAbsent(DEFAULT_SHARED_SESSION.getId(), DEFAULT_SHARED_SESSION);
+            return DEFAULT_SHARED_SESSION;
         }
-        return DEFAULT_SHARED_SESSION;
+        return SESSION_STORE.computeIfAbsent(sessionId, AuraSession::new);
     }
 
     public static void registerSession(AuraSession session) {
@@ -143,6 +148,7 @@ public class AuraSession implements Serializable {
         synchronized (DEFAULT_SHARED_SESSION) {
             DEFAULT_SHARED_SESSION.feedbackMessages.clear();
         }
+        SESSION_STORE.put(DEFAULT_SHARED_SESSION.getId(), DEFAULT_SHARED_SESSION);
     }
 
     public void invalidate() {

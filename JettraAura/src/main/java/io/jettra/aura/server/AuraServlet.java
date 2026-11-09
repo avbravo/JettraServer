@@ -66,20 +66,37 @@ public class AuraServlet extends HttpServlet {
         }
 
         AuraResponse auraRes = new AuraResponse();
-        AuraPage page = application.newPageInstance(pageClass);
+        String pageKey = AuraHandler.normalizePageKey(uri, pageClass);
+        AuraPage page = auraSession.getPage(pageKey);
+        if (page == null || !pageClass.isInstance(page)) {
+            page = application.newPageInstance(pageClass);
+            auraSession.putPage(pageKey, page);
+            auraSession.putPage(uri, page);
+        }
         page.setRequest(auraReq);
         page.setResponse(auraRes);
         page.setSession(auraSession);
+        page.autoBindAnnotatedComponents();
 
         try {
+            if (auraReq.isAjax()) {
+                String jsonResponse = AuraHandler.processAjaxRequest(page, auraReq, auraRes);
+                res.setContentType("application/json; charset=UTF-8");
+                res.setStatus(200);
+                PrintWriter out = res.getWriter();
+                out.print(jsonResponse);
+                out.flush();
+                return;
+            }
+
             if (auraReq.isPost()) {
-                // Manejar submit
-                for (io.jettra.aura.core.AuraComponent comp : page.getChildren()) {
-                    if (comp instanceof io.jettra.aura.components.AuraForm<?> form) {
-                        form.processSubmit(auraReq);
-                        break;
-                    }
+                AuraHandler.processFormPost(page, auraReq, auraRes);
+                if (auraRes.isRedirect()) {
+                    res.sendRedirect(auraRes.getRedirectLocation());
+                    return;
                 }
+            } else {
+                AuraHandler.processGetEvent(page, auraReq, auraRes);
                 if (auraRes.isRedirect()) {
                     res.sendRedirect(auraRes.getRedirectLocation());
                     return;

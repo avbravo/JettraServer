@@ -81,10 +81,12 @@ public class AuraApplication implements Serializable {
             return homePage;
         }
 
-        // Búsqueda por coincidencia de prefijo
+        // Búsqueda por coincidencia de prefijo (.html y .xhtml)
         for (Map.Entry<String, Class<? extends AuraPage>> entry : pageRoutes.entrySet()) {
             String route = entry.getKey();
-            if (normalized.equals(route) || normalized.equals(route + ".html")) {
+            if (normalized.equals(route)
+                    || normalized.equals(route + ".html")
+                    || normalized.equals(route + ".xhtml")) {
                 return entry.getValue();
             }
         }
