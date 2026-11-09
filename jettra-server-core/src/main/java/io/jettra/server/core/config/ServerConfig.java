@@ -99,7 +99,13 @@ public class ServerConfig {
         this.corsEnabled = Boolean.parseBoolean(resolveProp(props, new String[]{"cors.enabled", "cors", "jettra.server.cors.enabled"}, "JETTRA_SERVER_CORS_ENABLED", String.valueOf(this.corsEnabled)));
         this.virtualThreads = Boolean.parseBoolean(resolveProp(props, new String[]{"server.virtual-threads", "virtual.threads", "jettra.server.virtual-threads"}, "JETTRA_SERVER_VIRTUAL_THREADS", String.valueOf(this.virtualThreads)));
 
-        String modeStr = resolveProp(props, new String[]{"storage.mode", "storageMode", "jettra.storage.mode", "mode"}, "JETTRA_STORAGE_MODE", this.storageMode.name());
+        String modeStr = resolveProp(props, new String[]{"storage.mode", "storageMode", "jettra.storage.mode", "mode", "storage"}, "JETTRA_STORAGE_MODE", null);
+        if (modeStr == null) {
+            modeStr = System.getenv("STORAGE_MODE");
+        }
+        if (modeStr == null) {
+            modeStr = this.storageMode.name();
+        }
         this.storageMode = StorageMode.fromString(modeStr);
 
         this.offHeapPageSizeBytes = resolveIntProp(props, new String[]{"storage.offheap.page-size", "offheap.page-size"}, "JETTRA_OFFHEAP_PAGE_SIZE", this.offHeapPageSizeBytes);

@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Página de Prueba</title>
+</head>
+<body>
+    <header>
+        <h1 aura:id="welcomeMsg">Texto de Maqueta Reemplazable</h1>
+    </header>
+
+    <main>
+        <div aura:id="feedback"></div>
+
+        <section>
+            <h2>Lista de Elementos</h2>
+            <ul>
+                <li aura:id="itemList">
+                    <span aura:id="itemName">Nombre de muestra</span>
+                </li>
+            </ul>
+        </section>
+
+        <section>
+            <form aura:id="userForm">
+                <input type="text" aura:id="username" placeholder="Nombre" />
+                <button type="submit" aura:id="btnSave">Guardar</button>
+            </form>
+        </section>
+    </main>
+</body>
+</html>
+

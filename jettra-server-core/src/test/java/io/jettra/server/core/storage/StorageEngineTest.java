@@ -103,6 +103,19 @@ public class StorageEngineTest {
         StorageEngineFactory.closeAll();
     }
 
+    @Test
+    @DisplayName("Verificar resolución de modos de almacenamiento por configuración y abreviaturas (O, D, J)")
+    public void testStorageModeParsing() {
+        JettraAssert.assertEquals(StorageMode.OFF_HEAP, StorageMode.fromString("O"), "O debe resolver a OFF_HEAP");
+        JettraAssert.assertEquals(StorageMode.OFF_HEAP, StorageMode.fromString("off_heap"), "off_heap debe resolver a OFF_HEAP");
+        JettraAssert.assertEquals(StorageMode.OFF_HEAP, StorageMode.fromString("OFFHEAP"), "OFFHEAP debe resolver a OFF_HEAP");
+        JettraAssert.assertEquals(StorageMode.DISK_MEMORY, StorageMode.fromString("D"), "D debe resolver a DISK_MEMORY");
+        JettraAssert.assertEquals(StorageMode.DISK_MEMORY, StorageMode.fromString("disk_memory"), "disk_memory debe resolver a DISK_MEMORY");
+        JettraAssert.assertEquals(StorageMode.JVM_RAM, StorageMode.fromString("J"), "J debe resolver a JVM_RAM");
+        JettraAssert.assertEquals(StorageMode.JVM_RAM, StorageMode.fromString("R"), "R debe resolver a JVM_RAM");
+        JettraAssert.assertEquals(StorageMode.JVM_RAM, StorageMode.fromString("jvm_ram"), "jvm_ram debe resolver a JVM_RAM");
+    }
+
     private static void deleteDir(File dir) {
         if (dir.isDirectory()) {
             File[] files = dir.listFiles();

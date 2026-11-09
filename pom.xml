@@ -35,6 +35,7 @@
         <module>jettra-server-core</module>
         <module>jettra-server-jakarta</module>
         <module>jettra-server-flux</module>
+        <module>JettraAura</module>
     </modules>
 
     <properties>
@@ -125,6 +126,11 @@
             <dependency>
                 <groupId>io.jettra</groupId>
                 <artifactId>jettra-server-flux</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.jettra</groupId>
+                <artifactId>JettraAura</artifactId>
                 <version>${project.version}</version>
             </dependency>
 

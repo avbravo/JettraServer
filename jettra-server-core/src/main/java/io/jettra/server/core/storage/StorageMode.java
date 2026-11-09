@@ -27,8 +27,9 @@ public enum StorageMode {
         }
         String clean = val.trim().toUpperCase();
         return switch (clean) {
-            case "DISK_MEMORY", "DISK", "LSM" -> DISK_MEMORY;
-            case "OFF_HEAP", "OFFHEAP", "PANAMA" -> OFF_HEAP;
+            case "OFF_HEAP", "OFFHEAP", "OFF-HEAP", "PANAMA", "O", "OFF" -> OFF_HEAP;
+            case "DISK_MEMORY", "DISKMEMORY", "DISK-MEMORY", "DISK", "LSM", "D" -> DISK_MEMORY;
+            case "JVM_RAM", "JVMRAM", "JVM-RAM", "JVM", "RAM", "J", "R" -> JVM_RAM;
             default -> JVM_RAM;
         };
     }
