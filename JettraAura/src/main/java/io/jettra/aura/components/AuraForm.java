@@ -68,7 +68,18 @@ public class AuraForm<T> extends AuraContainer {
         tag.setAttribute("method", "post");
         if (action != null && !action.isBlank()) {
             tag.setAttribute("action", action);
+        } else {
+            tag.setAttribute("action", "?aura:target=" + getPath());
         }
+    }
+
+    /**
+     * Procesa únicamente las entradas de los componentes del formulario sin disparar onSubmit().
+     * Útil para botones Ajax anidados dentro del formulario.
+     */
+    public void processFormInputs(AuraRequest req) {
+        if (req == null) return;
+        processFormComponents(this, req);
     }
 
     /**
@@ -77,15 +88,38 @@ public class AuraForm<T> extends AuraContainer {
     public void processSubmit(AuraRequest req) {
         if (req == null) return;
 
+        AuraButton submittingButton = findSubmittingButton(this, req);
+        if (submittingButton != null && !submittingButton.isDefaultFormProcessing()) {
+            submittingButton.onSubmit();
+            return;
+        }
+
         // 1. Procesar todos los componentes de formulario anidados
         processFormComponents(this, req);
 
-        // 2. Ejecutar onSubmit
+        // 2. Ejecutar onSubmit del botón específico (si existe) y del formulario
         try {
+            if (submittingButton != null) {
+                submittingButton.onSubmit();
+            }
             onSubmit();
         } catch (Exception e) {
             onError();
         }
+    }
+
+    private AuraButton findSubmittingButton(AuraContainer container, AuraRequest req) {
+        for (io.jettra.aura.core.AuraComponent child : container.getChildren()) {
+            if (child instanceof AuraButton btn) {
+                if (req.getParameters().containsKey(btn.getPath()) || req.getParameters().containsKey(btn.getId())) {
+                    return btn;
+                }
+            } else if (child instanceof AuraContainer sub) {
+                AuraButton found = findSubmittingButton(sub, req);
+                if (found != null) return found;
+            }
+        }
+        return null;
     }
 
     private void processFormComponents(AuraContainer container, AuraRequest req) {

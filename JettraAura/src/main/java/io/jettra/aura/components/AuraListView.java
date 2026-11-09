@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.function.Consumer;
 
 /**
- * Componente repetidor de listas (similar a ListView en Apache Wicket).
+ * Componente repetidor de listas .
  * Clona el fragmento de marcado HTML interno para cada elemento de la colección
  * y delega en {@link #populateItem(AuraListItem)} o en un {@link Consumer} la vinculación
  * de componentes hijos a cada fila.
@@ -55,6 +55,32 @@ public class AuraListView<T> extends AuraContainer {
         }
     }
 
+    /**
+     * Reconstruye los items hijos ({@link AuraListItem}) a partir del modelo actual
+     * y los registra en este contenedor para permitir la resolución de rutas de eventos
+     * (por ejemplo, `productList:0:btnDelete`).
+     */
+    @SuppressWarnings("unchecked")
+    public void populateItems() {
+        getChildrenMap().clear();
+        Object modelObj = getModelObject();
+        List<T> list = (modelObj instanceof List<?>) ? (List<T>) modelObj : Collections.emptyList();
+        int index = 0;
+        for (T element : list) {
+            AuraListItem<T> item = new AuraListItem<>(index++, Model.of(element));
+            super.add(item);
+            populateItem(item);
+        }
+    }
+
+    @Override
+    public io.jettra.aura.core.AuraComponent get(String id) {
+        if (getChildrenMap().isEmpty()) {
+            populateItems();
+        }
+        return super.get(id);
+    }
+
     @Override
     @SuppressWarnings("unchecked")
     public void render(AuraTag tag, String markupBody, StringBuilder output) {
@@ -64,9 +90,12 @@ public class AuraListView<T> extends AuraContainer {
         }
         onBeforeRender();
 
-        Object modelObj = getModelObject();
-        List<T> list = (modelObj instanceof List<?>) ? (List<T>) modelObj : Collections.emptyList();
-        if (list.isEmpty()) {
+        if (getModel() != null) {
+            getModel().detach();
+        }
+        populateItems();
+
+        if (getChildrenMap().isEmpty()) {
             return;
         }
 
@@ -74,26 +103,22 @@ public class AuraListView<T> extends AuraContainer {
                 ? AuraTemplateParser.parse(markupBody)
                 : null;
 
-        int index = 0;
-        for (T element : list) {
-            AuraListItem<T> item = new AuraListItem<>(index++, Model.of(element));
-            item.setParent(this);
-            populateItem(item);
+        for (io.jettra.aura.core.AuraComponent child : getChildren()) {
+            if (child instanceof AuraListItem<?> item) {
+                AuraTag itemTag = new AuraTag(tag.getName());
+                itemTag.getAttributes().putAll(tag.getAttributes());
+                itemTag.removeAttribute("aura:id");
+                itemTag.removeAttribute("j:id");
+                itemTag.removeAttribute("data-aura-id");
+                onComponentTag(itemTag);
 
-            AuraTag itemTag = new AuraTag(tag.getName());
-            itemTag.getAttributes().putAll(tag.getAttributes());
-            itemTag.removeAttribute("aura:id");
-            itemTag.removeAttribute("j:id");
-            itemTag.removeAttribute("wicket:id");
-            itemTag.removeAttribute("data-aura-id");
-            onComponentTag(itemTag);
-
-            output.append(itemTag.renderOpen());
-            if (!itemTag.isSelfClosing()) {
-                if (rowDoc != null) {
-                    output.append(rowDoc.render(item));
+                output.append(itemTag.renderOpen());
+                if (!itemTag.isSelfClosing()) {
+                    if (rowDoc != null) {
+                        output.append(rowDoc.render(item));
+                    }
+                    output.append(itemTag.renderClose());
                 }
-                output.append(itemTag.renderClose());
             }
         }
     }

@@ -25,7 +25,7 @@ public class AuraModule {
 
     private AuraModule(JettraServer server) {
         this.server = server;
-        this.application = AuraApplication.get();
+        this.application = new AuraApplication();
         this.handler = new AuraHandler(application);
     }
 

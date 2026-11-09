@@ -8,7 +8,7 @@ import io.jettra.aura.template.AuraTemplateLocator;
 import io.jettra.aura.template.AuraTemplateParser;
 
 /**
- * Componente de panel modular reutilizable (similar a Panel en Apache Wicket).
+ * Componente de panel modular reutilizable .
  * Cada subclase de {@link AuraPanel} puede poseer su propia plantilla HTML homónima
  * (ej. UserCard.java ↔ UserCard.html) y encapsular su propia jerarquía de componentes hijos.
  */

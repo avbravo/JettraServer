@@ -39,7 +39,16 @@ public class AuraAjaxButton extends AuraButton {
         if (onAjaxSubmitConsumer != null) {
             onAjaxSubmitConsumer.accept(target);
         } else {
-            onSubmit();
+            super.onSubmit();
+        }
+    }
+
+    @Override
+    public void onSubmit() {
+        if (onAjaxSubmitConsumer != null) {
+            onAjaxSubmitConsumer.accept(new AuraAjaxRequestTarget(getPage()));
+        } else {
+            super.onSubmit();
         }
     }
 
@@ -47,7 +56,7 @@ public class AuraAjaxButton extends AuraButton {
     protected void onComponentTag(AuraTag tag) {
         super.onComponentTag(tag);
         tag.setAttribute("type", "button");
-        tag.setAttribute("onclick", "auraAjax('" + getPath() + "', 'click'); return false;");
+        tag.setAttribute("onclick", "auraAjax('" + getPath() + "', 'click', null, this); return false;");
     }
 }
 

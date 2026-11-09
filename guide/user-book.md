@@ -579,9 +579,9 @@ volumes:
 
 ---
 
-## 18. Aplicación de Ejemplo: JettraServerExample
+## 18. Aplicación de Ejemplo: WebExample
 
-El proyecto [`JettraServerExample`](file:///home/avbravo/NetBeansProjects/jettrastack_local/jettraframeworkscontainers/JettraServer/JettraServerExample) ilustra una aplicación empresarial web completa que integra:
+El proyecto [`WebExample`](file:///home/avbravo/NetBeansProjects/jettrastack_local/jettraserverexamples/WebExample) ilustra una aplicación empresarial web completa que integra:
 1. **Jakarta Faces & PrimeFaces 14:**
    - **Formulario de Login:** Valida credenciales declarativamente contra el servicio de seguridad y entidades JPA.
    - **Plantilla Dashboard (Top, Left, Center, Footer):**

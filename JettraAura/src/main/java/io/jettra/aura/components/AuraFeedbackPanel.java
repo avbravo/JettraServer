@@ -6,7 +6,7 @@ import io.jettra.aura.core.AuraTag;
 import java.util.List;
 
 /**
- * Panel de retroalimentación de mensajes (similar a FeedbackPanel en Apache Wicket).
+ * Panel de retroalimentación de mensajes .
  * Renderiza los mensajes informativos, de éxito, advertencia o error acumulados en la sesión.
  */
 public class AuraFeedbackPanel extends AuraComponent {

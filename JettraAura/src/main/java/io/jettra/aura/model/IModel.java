@@ -5,7 +5,7 @@ import java.io.Serializable;
 /**
  * Interfaz fundamental para modelos de datos en JettraAura.
  * Separa la lógica de presentación de los componentes del modelo de datos subyacente.
- * Inspirado en el diseño desacoplado de Apache Wicket pero optimizado para Java 25.
+ * Inspirado en el diseño desacoplado  pero optimizado para Java 25.
  *
  * @param <T> Tipo de objeto encapsulado en el modelo
  */

@@ -33,7 +33,16 @@ public class AuraAjaxLink extends AuraLink {
         if (onAjaxClickConsumer != null) {
             onAjaxClickConsumer.accept(target);
         } else {
-            onClick();
+            super.onClick();
+        }
+    }
+
+    @Override
+    public void onClick() {
+        if (onAjaxClickConsumer != null) {
+            onAjaxClickConsumer.accept(new AuraAjaxRequestTarget(getPage()));
+        } else {
+            super.onClick();
         }
     }
 
@@ -41,7 +50,7 @@ public class AuraAjaxLink extends AuraLink {
     protected void onComponentTag(AuraTag tag) {
         super.onComponentTag(tag);
         tag.setAttribute("href", "javascript:void(0)");
-        tag.setAttribute("onclick", "auraAjax('" + getPath() + "', 'click'); return false;");
+        tag.setAttribute("onclick", "auraAjax('" + getPath() + "', 'click', null, this); return false;");
     }
 }
 

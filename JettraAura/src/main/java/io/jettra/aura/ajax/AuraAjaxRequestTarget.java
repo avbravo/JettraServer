@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Objetivo de petición asíncrona Ajax (similar a AjaxRequestTarget en Apache Wicket).
+ * Objetivo de petición asíncrona Ajax .
  * Permite actualizar selectivamente fragmentos del DOM en el navegador sin recarga de página completa.
  */
 public class AuraAjaxRequestTarget implements Serializable {
@@ -88,16 +88,19 @@ public class AuraAjaxRequestTarget implements Serializable {
             String markupId = entry.getKey();
             AuraComponent comp = entry.getValue();
 
-            // Renderizar el componente individualmente
-            AuraTag tag = new AuraTag("div");
-            tag.setAuraId(comp.getId());
-            tag.setAttribute("id", markupId);
+            String rendered = page != null ? page.renderComponent(comp) : "";
+            if (rendered == null || rendered.isBlank()) {
+                AuraTag tag = new AuraTag("div");
+                tag.setAuraId(comp.getId());
+                tag.setAttribute("id", markupId);
 
-            StringBuilder compOut = new StringBuilder();
-            comp.render(tag, "", compOut);
+                StringBuilder compOut = new StringBuilder();
+                comp.render(tag, "", compOut);
+                rendered = compOut.toString();
+            }
 
             sb.append("\"").append(escapeJson(markupId)).append("\":\"")
-              .append(escapeJson(compOut.toString())).append("\"");
+              .append(escapeJson(rendered)).append("\"");
         }
         sb.append("},\"scripts\":[");
 

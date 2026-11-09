@@ -7,7 +7,7 @@ import io.jettra.aura.model.Model;
 import java.util.function.Supplier;
 
 /**
- * Componente de etiqueta de texto (similar a Label en Apache Wicket).
+ * Componente de etiqueta de texto .
  * Reemplaza el contenido interno de la etiqueta HTML asociada por el valor de su modelo.
  */
 public class AuraLabel extends AuraComponent {

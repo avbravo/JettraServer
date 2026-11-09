@@ -4,7 +4,7 @@ import java.io.Serializable;
 import java.util.function.Supplier;
 
 /**
- * Comportamiento modificador de atributos para etiquetas HTML (similar a AttributeModifier en Wicket).
+ * Comportamiento modificador de atributos para etiquetas HTML.
  */
 public class AuraTagModifier implements Serializable {
 

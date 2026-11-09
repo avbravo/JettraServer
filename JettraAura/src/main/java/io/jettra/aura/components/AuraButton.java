@@ -11,6 +11,7 @@ import io.jettra.aura.model.Model;
 public class AuraButton extends AuraComponent {
 
     private Runnable onSubmitListener;
+    private boolean defaultFormProcessing = true;
 
     public AuraButton(String id) {
         super(id);
@@ -28,6 +29,20 @@ public class AuraButton extends AuraComponent {
     public AuraButton(String id, IModel<?> model, Runnable onSubmitListener) {
         super(id, model);
         this.onSubmitListener = onSubmitListener;
+    }
+
+    public AuraButton setOnSubmit(Runnable onSubmitListener) {
+        this.onSubmitListener = onSubmitListener;
+        return this;
+    }
+
+    public boolean isDefaultFormProcessing() {
+        return defaultFormProcessing;
+    }
+
+    public AuraButton setDefaultFormProcessing(boolean defaultFormProcessing) {
+        this.defaultFormProcessing = defaultFormProcessing;
+        return this;
     }
 
     public void onSubmit() {

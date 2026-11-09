@@ -116,7 +116,6 @@ public class AuraTag implements Serializable {
     private static boolean isInternalAuraAttribute(String attr) {
         return "aura:id".equalsIgnoreCase(attr) ||
                "j:id".equalsIgnoreCase(attr) ||
-               "wicket:id".equalsIgnoreCase(attr) ||
                "data-aura-id".equalsIgnoreCase(attr);
     }
 

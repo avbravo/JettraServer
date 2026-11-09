@@ -1,10 +1,13 @@
 package io.jettra.aura.core;
 
+import io.jettra.aura.ajax.AuraAjaxRequestTarget;
+import io.jettra.aura.annotation.AuraAction;
 import io.jettra.aura.annotation.AuraHeader;
 import io.jettra.aura.model.IModel;
 import io.jettra.aura.template.AuraMarkupDocument;
 import io.jettra.aura.template.AuraTemplateLocator;
 import io.jettra.aura.template.AuraTemplateParser;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -179,6 +182,66 @@ public class AuraPage extends AuraContainer {
         return renderedHtml;
     }
 
+    /**
+     * Renderiza un único componente dentro del contexto de la plantilla HTML de esta página.
+     * Utilizado por {@link AuraAjaxRequestTarget} para refrescar contenedores, tablas o diálogos.
+     */
+    public String renderComponent(AuraComponent component) {
+        if (component == null) return "";
+        autoBindAnnotatedComponents();
+        String templateHtml = AuraTemplateLocator.loadTemplate(getClass());
+        AuraMarkupDocument document = AuraTemplateParser.parse(templateHtml);
+        StringBuilder sb = new StringBuilder();
+        if (document.renderComponent(this, component, sb)) {
+            return sb.toString();
+        }
+        return "";
+    }
+
+    /**
+     * Invoca métodos anotados con {@link AuraAction} cuyo valor coincida con el targetId o id del componente.
+     */
+    public boolean invokeAuraAction(String targetId, AuraRequest req, AuraResponse res, AuraAjaxRequestTarget ajaxTarget) {
+        if (targetId == null || targetId.isBlank()) return false;
+        String simpleId = targetId.contains(":") ? targetId.substring(targetId.lastIndexOf(':') + 1) : targetId;
+        boolean invoked = false;
+
+        Class<?> clazz = getClass();
+        while (clazz != null && clazz != AuraPage.class && clazz != Object.class) {
+            for (Method method : clazz.getDeclaredMethods()) {
+                AuraAction action = method.getAnnotation(AuraAction.class);
+                if (action != null) {
+                    String actionId = action.value().isBlank() ? method.getName() : action.value();
+                    if (actionId.equals(targetId) || actionId.equals(simpleId)) {
+                        try {
+                            method.setAccessible(true);
+                            Class<?>[] paramTypes = method.getParameterTypes();
+                            Object[] args = new Object[paramTypes.length];
+                            for (int i = 0; i < paramTypes.length; i++) {
+                                if (AuraAjaxRequestTarget.class.isAssignableFrom(paramTypes[i])) {
+                                    args[i] = ajaxTarget;
+                                } else if (AuraRequest.class.isAssignableFrom(paramTypes[i])) {
+                                    args[i] = req;
+                                } else if (AuraResponse.class.isAssignableFrom(paramTypes[i])) {
+                                    args[i] = res;
+                                } else if (AuraEvent.class.isAssignableFrom(paramTypes[i])) {
+                                    AuraComponent src = get(targetId);
+                                    args[i] = new AuraEvent(src != null ? src : this, req != null ? req.getParameter("aura:event") : "action", req, res, ajaxTarget);
+                                }
+                            }
+                            method.invoke(this, args);
+                            invoked = true;
+                        } catch (Exception e) {
+                            throw new RuntimeException("Error invocando @AuraAction en " + method.getName(), e);
+                        }
+                    }
+                }
+            }
+            clazz = clazz.getSuperclass();
+        }
+        return invoked;
+    }
+
     private String injectHeaderContributions(String html) {
         if (!html.contains("</head>")) {
             return html;
@@ -214,9 +277,21 @@ public class AuraPage extends AuraContainer {
     private static String getAuraClientScript() {
         return """
           <script id="jettra-aura-runtime">
-            function auraAjax(componentId, eventType, extraParams) {
+            function auraAjax(componentId, eventType, extraParams, triggerEl) {
               const url = window.location.pathname;
               const formData = new URLSearchParams(extraParams || {});
+
+              let el = triggerEl || document.querySelector('[data-aura-path="' + componentId + '"]') || document.getElementById('aura-' + componentId.replace(/:/g, '-'));
+              let form = el ? el.closest('form') : null;
+              if (form) {
+                const fd = new FormData(form);
+                for (const [k, v] of fd.entries()) {
+                  if (!formData.has(k)) {
+                    formData.append(k, v);
+                  }
+                }
+              }
+
               formData.append('aura:ajax', 'true');
               formData.append('aura:target', componentId);
               formData.append('aura:event', eventType || 'click');
@@ -234,14 +309,14 @@ public class AuraPage extends AuraContainer {
                 }
                 if (data.updates) {
                   for (const [id, html] of Object.entries(data.updates)) {
-                    const el = document.getElementById(id) || document.querySelector('[aura\\\\:id="' + id + '"]');
-                    if (el) {
+                    const targetEl = document.getElementById(id) || document.querySelector('[aura\\\\:id="' + id + '"]');
+                    if (targetEl) {
                       const temp = document.createElement('div');
-                      temp.innerHTML = html;
+                      temp.innerHTML = html.trim();
                       if (temp.firstElementChild) {
-                        el.replaceWith(temp.firstElementChild);
+                        targetEl.replaceWith(temp.firstElementChild);
                       } else {
-                        el.innerHTML = html;
+                        targetEl.innerHTML = html;
                       }
                     }
                   }
@@ -253,6 +328,14 @@ public class AuraPage extends AuraContainer {
                 }
               })
               .catch(err => console.error('Aura AJAX Error:', err));
+            }
+
+            function auraCloseModal(markupId, componentPath) {
+              const el = document.getElementById(markupId);
+              if (el) el.style.display = 'none';
+              if (componentPath) {
+                auraAjax(componentPath, 'close');
+              }
             }
           </script>
         """;

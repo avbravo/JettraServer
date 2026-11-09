@@ -1,6 +1,5 @@
 package io.jettra.aura.core;
 
-import io.jettra.aura.annotation.AuraComponent;
 import io.jettra.aura.model.IModel;
 import java.lang.reflect.Field;
 import java.util.Collection;
@@ -37,16 +36,39 @@ public class AuraContainer extends io.jettra.aura.core.AuraComponent {
     }
 
     public io.jettra.aura.core.AuraComponent get(String id) {
-        if (id == null) return null;
+        if (id == null || id.isBlank()) return null;
         if (id.contains(":")) {
             String[] parts = id.split(":", 2);
             io.jettra.aura.core.AuraComponent first = children.get(parts[0]);
+            if (first == null) {
+                first = findDirectOrNested(parts[0]);
+            }
             if (first instanceof AuraContainer c) {
                 return c.get(parts[1]);
             }
             return null;
         }
-        return children.get(id);
+        io.jettra.aura.core.AuraComponent direct = children.get(id);
+        if (direct != null) {
+            return direct;
+        }
+        return findDirectOrNested(id);
+    }
+
+    private io.jettra.aura.core.AuraComponent findDirectOrNested(String id) {
+        for (io.jettra.aura.core.AuraComponent child : children.values()) {
+            if (child instanceof AuraContainer c && !(child instanceof io.jettra.aura.components.AuraListView)) {
+                io.jettra.aura.core.AuraComponent found = c.get(id);
+                if (found != null) {
+                    return found;
+                }
+            }
+        }
+        return null;
+    }
+
+    public io.jettra.aura.core.AuraComponent findComponent(String pathOrId) {
+        return get(pathOrId);
     }
 
     public boolean contains(String id) {
@@ -101,4 +123,3 @@ public class AuraContainer extends io.jettra.aura.core.AuraComponent {
         }
     }
 }
-

@@ -3,7 +3,7 @@ package io.jettra.aura.model;
 /**
  * Modelo compuesto que propaga automáticamente el acceso a propiedades del objeto raíz
  * a todos los componentes hijos en función de su identificador (component.getId()).
- * Característica emblemática de Wicket ahora adaptada a JettraAura.
+ * Característica emblemática ahora adaptada a JettraAura.
  *
  * @param <T> Tipo del objeto raíz del modelo compuesto
  */

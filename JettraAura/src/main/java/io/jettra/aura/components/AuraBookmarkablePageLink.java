@@ -5,7 +5,7 @@ import io.jettra.aura.core.AuraPage;
 
 /**
  * Enlace navegable que apunta directamente a una clase de página {@link AuraPage} registrada.
- * Similar a BookmarkablePageLink en Apache Wicket.
+ * 
  */
 public class AuraBookmarkablePageLink<C extends AuraPage> extends AuraLink {
 

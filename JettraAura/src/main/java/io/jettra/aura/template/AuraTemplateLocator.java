@@ -10,7 +10,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Localizador y cargador de plantillas HTML para componentes y páginas JettraAura.
- * Aplica convención 1:1 estilo Apache Wicket: Index.java busca Index.html en el mismo paquete,
+ * Aplica convención 1:1 Index.java busca Index.html en el mismo paquete,
  * en resources/templates, resources/webapp o en la ruta especificada por @AuraTemplate.
  */
 public class AuraTemplateLocator {
@@ -18,12 +18,12 @@ public class AuraTemplateLocator {
     private static final Map<Class<?>, String> TEMPLATE_CACHE = new ConcurrentHashMap<>();
 
     private static final java.util.regex.Pattern EXTEND_PATTERN = java.util.regex.Pattern.compile(
-        "<(?:aura|wicket|j):extend>(.*?)</(?:aura|wicket|j):extend>",
+        "<(?:aura|j):extend>(.*?)</(?:aura|j):extend>",
         java.util.regex.Pattern.DOTALL | java.util.regex.Pattern.CASE_INSENSITIVE
     );
 
     private static final java.util.regex.Pattern CHILD_PATTERN = java.util.regex.Pattern.compile(
-        "<(?:aura|wicket|j):child\\s*(?:/>|>\\s*</(?:aura|wicket|j):child>)",
+        "<(?:aura|j):child\\s*(?:/>|>\\s*</(?:aura|j):child>)",
         java.util.regex.Pattern.DOTALL | java.util.regex.Pattern.CASE_INSENSITIVE
     );
 

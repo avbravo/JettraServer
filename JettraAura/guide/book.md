@@ -28,7 +28,7 @@
 ## Capítulo 1: Introducción y Manifiesto de JettraAura
 
 ### 1.1 ¿Qué es JettraAura?
-**JettraAura** es un framework web orientado a componentes para la plataforma Java, fuertemente inspirado en los principios de diseño de **Apache Wicket**, pero completamente rediseñado desde sus cimientos para aprovechar las capacidades de **Java 25+**, los hilos virtuales de **Project Loom**, el motor de almacenamiento desacoplado de **JettraServer** (Memoria Panamá FFM Off-Heap y LSM Disk) y el ecosistema visual de **JettraFlux**.
+**JettraAura** es un framework web orientado a componentes para la plataforma Java, rediseñado desde sus cimientos para aprovechar las capacidades de **Java 25+**, los hilos virtuales de **Project Loom**, el motor de almacenamiento desacoplado de **JettraServer** (Memoria Panamá FFM Off-Heap y LSM Disk) y el ecosistema visual de **JettraFlux**.
 
 En el panorama actual del desarrollo web, los desarrolladores a menudo se ven obligados a elegir entre dos extremos:
 1. Frameworks de servidor basados en lenguajes de plantillas con sintaxis compleja embebida en el HTML (`${...}`, tags JSP/JSF ilegibles, directivas Thymeleaf engorrosas).
@@ -47,7 +47,7 @@ flowchart LR
 ```
 
 ### 1.2 Principios Fundamentales
-1. **Separación Absoluta:** Cero código Java ni expresiones dentro del HTML. Los componentes se vinculan mediante el atributo `aura:id` (o sus alias `j:id`, `wicket:id`, `data-aura-id`).
+1. **Separación Absoluta:** Cero código Java ni expresiones dentro del HTML. Los componentes se vinculan mediante el atributo `aura:id` (o sus alias `j:id`,  `data-aura-id`).
 2. **Asociación 1:1:** Cada página HTML está emparejada con una clase Java homónima ubicada en el mismo paquete o ruta de recursos (ejemplo: `ClientePage.html` $\leftrightarrow$ `ClientePage.java`).
 3. **Manejo Transparente de Memoria:** A través de la abstracción `IModel<T>` y `LoadableDetachableModel<T>`, los datos pesados se desacoplan automáticamente al final de cada ciclo de renderizado, evitando la retención accidental de memoria y garantizando un consumo mínimo de RAM.
 4. **Concurrencia Escala Loom:** JettraAura procesa cada solicitud HTTP dentro de un Virtual Thread de Java 25, permitiendo atender cientos de miles de conexiones concurrentes sin bloquear hilos del sistema operativo.
@@ -476,7 +476,7 @@ A diferencia de los frameworks web del pasado, **JettraAura es 100% Zero-XML y n
 ---
 
 ### 8.3 Herencia de Plantillas Maestras (`<aura:extend>` y `<aura:child/>`)
-JettraAura implementa el patrón de **Herencia Visual de Plantillas** (inspirado en `<wicket:extend>` / `<wicket:child>`), permitiendo que múltiples páginas compartan una misma maqueta global (Topbar, Menú Lateral Hamburguesa, Cambiador de Tema Claro/Oscuro, Badges de Persistencia y Footer) sin duplicar código HTML:
+JettraAura implementa el patrón de **Herencia Visual de Plantillas**, permitiendo que múltiples páginas compartan una misma maqueta global (Topbar, Menú Lateral Hamburguesa, Cambiador de Tema Claro/Oscuro, Badges de Persistencia y Footer) sin duplicar código HTML:
 
 #### 1. Plantilla Maestra Base (`AuraTemplatePage.html`)
 Define la estructura exterior compartida y el marcador `<aura:child/>` donde se incrustará el contenido de las páginas derivadas:
@@ -769,7 +769,6 @@ public class App {
 Cualquiera de los siguientes atributos puede utilizarse en el marcado HTML para vincular un componente Java:
 - `aura:id="miComponente"` (Predilecto oficial de JettraAura)
 - `j:id="miComponente"` (Sintaxis Jettra Frameworks)
-- `wicket:id="miComponente"` (Compatibilidad y migración directa desde Apache Wicket)
 - `data-aura-id="miComponente"` (Marcado HTML5 estricto para validadores W3C)
 
 ### 10.2 Reglas de Oro de JettraAura

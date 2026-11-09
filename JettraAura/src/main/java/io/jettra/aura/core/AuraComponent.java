@@ -1,17 +1,20 @@
 package io.jettra.aura.core;
 
+import io.jettra.aura.ajax.AuraAjaxRequestTarget;
 import io.jettra.aura.model.CompoundPropertyModel;
 import io.jettra.aura.model.IModel;
 import io.jettra.aura.model.Model;
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.UUID;
+import java.util.Map;
+import java.util.function.Consumer;
 
 /**
  * Clase base para todos los componentes de la interfaz de usuario en JettraAura.
  * Cada componente se asocia con un elemento del archivo HTML marcado con aura:id.
- * Gestiona ciclo de vida, modelos, atributos HTML, visibilidad y eventos.
+ * Gestiona ciclo de vida, modelos, atributos HTML, visibilidad y control de eventos.
  */
 public abstract class AuraComponent implements Serializable {
 
@@ -24,6 +27,8 @@ public abstract class AuraComponent implements Serializable {
     private boolean outputMarkupId = false;
     private String markupId;
     private final List<AuraTagModifier> modifiers = new ArrayList<>();
+    private final Map<String, List<AuraEventListener>> eventListeners = new LinkedHashMap<>();
+    private final Map<String, List<Consumer<AuraAjaxRequestTarget>>> ajaxEventListeners = new LinkedHashMap<>();
 
     public AuraComponent(String id) {
         this(id, null);
@@ -50,12 +55,29 @@ public abstract class AuraComponent implements Serializable {
     }
 
     @SuppressWarnings("unchecked")
+    public <C extends AuraContainer> C findParent(Class<C> containerType) {
+        AuraContainer current = this.parent;
+        while (current != null) {
+            if (containerType.isInstance(current)) {
+                return (C) current;
+            }
+            current = current.getParent();
+        }
+        return null;
+    }
+
+    @SuppressWarnings("unchecked")
     public <T> IModel<T> getModel() {
         if (this.model == null && parent != null) {
-            // Soporte para CompoundPropertyModel heredado del contenedor padre
-            IModel<?> parentModel = parent.getModel();
-            if (parentModel instanceof CompoundPropertyModel<?> cpm) {
-                this.model = cpm.bind(this.id);
+            // Soporte para CompoundPropertyModel heredado del contenedor padre o formulario ancestro
+            AuraContainer current = parent;
+            while (current != null) {
+                IModel<?> parentModel = current.getModel();
+                if (parentModel instanceof CompoundPropertyModel<?> cpm) {
+                    this.model = cpm.bind(this.id);
+                    break;
+                }
+                current = current.getParent();
             }
         }
         return (IModel<T>) this.model;
@@ -119,10 +141,10 @@ public abstract class AuraComponent implements Serializable {
     }
 
     public String getMarkupId() {
-        if (markupId == null) {
-            markupId = "aura-" + id + "-" + Integer.toHexString(UUID.randomUUID().hashCode());
+        if (markupId != null && !markupId.isBlank()) {
+            return markupId;
         }
-        return markupId;
+        return "aura-" + getPath().replace(':', '-');
     }
 
     public AuraComponent setMarkupId(String markupId) {
@@ -137,6 +159,59 @@ public abstract class AuraComponent implements Serializable {
 
     public List<AuraTagModifier> getModifiers() {
         return modifiers;
+    }
+
+    /**
+     * Registra un listener de eventos general (síncrono o asíncrono) para el tipo de evento indicado.
+     */
+    public AuraComponent onEvent(String eventType, AuraEventListener listener) {
+        if (eventType != null && listener != null) {
+            String key = eventType.trim().toLowerCase();
+            eventListeners.computeIfAbsent(key, k -> new ArrayList<>()).add(listener);
+        }
+        return this;
+    }
+
+    /**
+     * Registra un listener de evento AJAX en el componente (ej. "click", "change", "blur").
+     */
+    public AuraComponent addAjaxEvent(String eventType, Consumer<AuraAjaxRequestTarget> listener) {
+        if (eventType != null && listener != null) {
+            String key = eventType.trim().toLowerCase();
+            this.outputMarkupId = true;
+            ajaxEventListeners.computeIfAbsent(key, k -> new ArrayList<>()).add(listener);
+        }
+        return this;
+    }
+
+    /**
+     * Dispara un evento sobre el componente ejecutando todos los listeners registrados.
+     */
+    public void fireEvent(AuraEvent event) {
+        if (event == null) return;
+        String key = event.getEventType().toLowerCase();
+
+        List<AuraEventListener> listeners = eventListeners.get(key);
+        if (listeners != null) {
+            for (AuraEventListener l : listeners) {
+                l.onEvent(event);
+            }
+        }
+        List<AuraEventListener> wildcardListeners = eventListeners.get("*");
+        if (wildcardListeners != null) {
+            for (AuraEventListener l : wildcardListeners) {
+                l.onEvent(event);
+            }
+        }
+
+        if (event.getAjaxTarget() != null) {
+            List<Consumer<AuraAjaxRequestTarget>> ajaxListeners = ajaxEventListeners.get(key);
+            if (ajaxListeners != null) {
+                for (Consumer<AuraAjaxRequestTarget> al : ajaxListeners) {
+                    al.accept(event.getAjaxTarget());
+                }
+            }
+        }
     }
 
     /**
@@ -161,8 +236,15 @@ public abstract class AuraComponent implements Serializable {
         if (outputMarkupId) {
             tag.setAttribute("id", getMarkupId());
         }
+        tag.setAttribute("data-aura-path", getPath());
         if (!enabled) {
             tag.setAttribute("disabled", "disabled");
+        }
+        for (String evtType : ajaxEventListeners.keySet()) {
+            String attrName = evtType.startsWith("on") ? evtType : "on" + evtType;
+            if (tag.getAttribute(attrName) == null) {
+                tag.setAttribute(attrName, "auraAjax('" + getPath() + "', '" + evtType + "', null, this); return false;");
+            }
         }
         for (AuraTagModifier modifier : modifiers) {
             modifier.modify(tag);

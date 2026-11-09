@@ -28,6 +28,7 @@ public class AuraApplication implements Serializable {
 
     public AuraApplication() {
         instance = this;
+        io.jettra.aura.core.AuraSession.clearAllSessions();
     }
 
     public static AuraApplication get() {
@@ -144,6 +145,7 @@ public class AuraApplication implements Serializable {
 
     public AuraApplication setCdiContainer(CdiContainer cdiContainer) {
         this.cdiContainer = cdiContainer;
+        io.jettra.aura.core.AuraSession.clearAllSessions();
         return this;
     }
 

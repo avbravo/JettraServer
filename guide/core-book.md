@@ -96,7 +96,7 @@ JettraServer/
 │   │   ├── FluxWebSocketBridge.java
 │   │   └── FluxFacesBridge.java
 │   └── src/test/java/             <- Pruebas de renderizado UI y WebSocket
-└── JettraServerExample/           <- Aplicación de referencia Jakarta EE, PrimeFaces y Flux
+└── WebExample/                    <- Aplicación de referencia Jakarta EE, PrimeFaces y Flux
     ├── src/main/java/io/jettra/server/example/
     │   ├── App.java               <- Bootstrap principal
     │   ├── model/ (User, Product) <- Entidades JPA con validaciones

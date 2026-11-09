@@ -8,10 +8,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Sesión de usuario de JettraAura. Mantiene estado de autenticación, atributos de sesión
- * y mensajes flash (feedback: info, success, warning, error).
+ * Sesión de usuario de JettraAura. Mantiene estado de autenticación, atributos de sesión,
+ * instancias de páginas con estado y mensajes flash (feedback: info, success, warning, error).
  */
 public class AuraSession implements Serializable {
 
@@ -22,14 +23,23 @@ public class AuraSession implements Serializable {
     public record FeedbackMessage(FeedbackLevel level, String text) implements Serializable {}
 
     private static final ThreadLocal<AuraSession> CURRENT = new ThreadLocal<>();
+    private static final Map<String, AuraSession> SESSION_STORE = new ConcurrentHashMap<>();
+    private static final AuraSession DEFAULT_SHARED_SESSION = new AuraSession("default-aura-session");
 
-    private final String id = UUID.randomUUID().toString();
+    private final String id;
     private String user;
     private Set<String> roles = Collections.emptySet();
-    private final Map<String, Object> attributes = new LinkedHashMap<>();
+    private final Map<String, Object> attributes = new ConcurrentHashMap<>();
+    private final Map<String, AuraPage> pageStore = new ConcurrentHashMap<>();
     private final List<FeedbackMessage> feedbackMessages = new ArrayList<>();
 
-    public AuraSession() {}
+    public AuraSession() {
+        this(UUID.randomUUID().toString());
+    }
+
+    public AuraSession(String id) {
+        this.id = (id != null && !id.isBlank()) ? id : UUID.randomUUID().toString();
+    }
 
     public static AuraSession get() {
         AuraSession s = CURRENT.get();
@@ -38,6 +48,19 @@ public class AuraSession implements Serializable {
             CURRENT.set(s);
         }
         return s;
+    }
+
+    public static AuraSession resolve(String sessionId) {
+        if (sessionId != null && !sessionId.isBlank()) {
+            return SESSION_STORE.computeIfAbsent(sessionId, AuraSession::new);
+        }
+        return DEFAULT_SHARED_SESSION;
+    }
+
+    public static void registerSession(AuraSession session) {
+        if (session != null) {
+            SESSION_STORE.put(session.getId(), session);
+        }
     }
 
     public static void set(AuraSession session) {
@@ -81,18 +104,56 @@ public class AuraSession implements Serializable {
     }
 
     public void setAttribute(String key, Object val) {
-        attributes.put(key, val);
+        if (key != null && val != null) {
+            attributes.put(key, val);
+        } else if (key != null) {
+            attributes.remove(key);
+        }
     }
 
     public void removeAttribute(String key) {
-        attributes.remove(key);
+        if (key != null) {
+            attributes.remove(key);
+        }
+    }
+
+    public AuraPage getPage(String uri) {
+        return uri != null ? pageStore.get(uri) : null;
+    }
+
+    public void putPage(String uri, AuraPage page) {
+        if (uri != null && page != null) {
+            pageStore.put(uri, page);
+        }
+    }
+
+    public void removePage(String uri) {
+        if (uri != null) {
+            pageStore.remove(uri);
+        }
+    }
+
+    public void clearPages() {
+        pageStore.clear();
+    }
+
+    public static void clearAllSessions() {
+        SESSION_STORE.clear();
+        DEFAULT_SHARED_SESSION.clearPages();
+        synchronized (DEFAULT_SHARED_SESSION) {
+            DEFAULT_SHARED_SESSION.feedbackMessages.clear();
+        }
     }
 
     public void invalidate() {
         user = null;
         roles = Collections.emptySet();
         attributes.clear();
-        feedbackMessages.clear();
+        pageStore.clear();
+        synchronized (this) {
+            feedbackMessages.clear();
+        }
+        SESSION_STORE.remove(id);
     }
 
     public void info(String message) {
@@ -125,4 +186,3 @@ public class AuraSession implements Serializable {
         return copy;
     }
 }
-

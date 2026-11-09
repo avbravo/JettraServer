@@ -14,7 +14,7 @@
     <artifactId>JettraAura</artifactId>
     <packaging>jar</packaging>
     <name>JettraAura</name>
-    <description>Framework Web Moderno Basado en Componentes y Asociación 1:1 Java-HTML (Estilo Apache Wicket) para JettraServer, Jakarta EE y MicroProfile</description>
+    <description>Framework Web Moderno Basado en Componentes y Asociación 1:1 Java-HTML  para JettraServer, Jakarta EE y MicroProfile</description>
 
     <dependencies>
         <dependency>

@@ -100,7 +100,7 @@ public class JettraAuraTest {
             <div class="container">
                 <h1 aura:id="title">Texto original</h1>
                 <p j:id="desc">Descripción</p>
-                <input wicket:id="age" type="number" />
+                <input aura:id="age" type="number" />
             </div>
             """;
 
@@ -213,6 +213,42 @@ public class JettraAuraTest {
         } finally {
             server.stop();
         }
+    }
+
+    @Test
+    @DisplayName("8. Verificar eventos AuraEvent, resolución en AuraListView y AuraModal")
+    public void testEventsListViewAndModal() {
+        TestIndex page = new TestIndex();
+
+        // 1. Verificar ID determinista de componente
+        AuraLabel label = (AuraLabel) page.get("welcomeMsg");
+        JettraAssert.assertEquals("aura-welcomeMsg", label.getMarkupId(), "MarkupId debe ser determinista");
+
+        // 2. Verificar registro y disparo de AuraEventListener
+        boolean[] eventTriggered = new boolean[]{false};
+        label.onEvent("custom", event -> {
+            eventTriggered[0] = true;
+            JettraAssert.assertEquals("custom", event.getEventType(), "Debe coincidir el tipo de evento");
+        });
+        label.fireEvent(new io.jettra.aura.core.AuraEvent(label, "custom", null, null, null));
+        JettraAssert.assertTrue(eventTriggered[0], "El listener de evento debió ejecutarse");
+
+        // 3. Verificar resolución de componentes hijos dentro de AuraListView sin render previo
+        io.jettra.aura.core.AuraComponent rowItemLabel = page.get("itemList:1:itemName");
+        JettraAssert.assertNotNull(rowItemLabel, "AuraListView debe poblar y resolver rutas de filas (itemList:1:itemName)");
+        JettraAssert.assertEquals("JakartaEE", rowItemLabel.getModelObject(), "El segundo elemento debe ser JakartaEE");
+
+        // 4. Verificar AuraModal renderizando componentes hijos
+        io.jettra.aura.components.AuraModal modal = new io.jettra.aura.components.AuraModal("testModal", "Confirmar Acción");
+        modal.add(new AuraLabel("modalMsg", "¿Desea continuar?"));
+        modal.show();
+        JettraAssert.assertTrue(modal.isOpen(), "El modal debe estar abierto");
+        String modalHtml = AuraTemplateParser.parse("<div aura:id=\"testModal\"><span aura:id=\"modalMsg\"></span></div>").render(new io.jettra.aura.core.AuraContainer("root") {{
+            add(modal);
+        }});
+        JettraAssert.assertTrue(modalHtml.contains("Confirmar Acción"), "El modal debe renderizar el título");
+        JettraAssert.assertTrue(modalHtml.contains("¿Desea continuar?"), "El modal debe renderizar sus componentes hijos");
+        JettraAssert.assertTrue(modalHtml.contains("display: flex;"), "El modal abierto debe tener display: flex");
     }
 }
 
