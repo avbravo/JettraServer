@@ -230,6 +230,12 @@ public class FluxTemplateView extends FluxView {
 }
 ```
 
+### 7.3 Consumo de Microservicios con Eclipse MicroProfile Rest Client y Jettra JWT (`CustomerFluxView`)
+La vista reactiva [`CustomerFluxView.java`](file:///home/avbravo/NetBeansProjects/jettrastack_local/jettraserverexamples/WebExample/src/main/java/io/jettra/server/example/flux/CustomerFluxView.java) demuestra cómo una aplicación JettraFlux puede consumir microservicios remotos orquestados por **Eclipse MicroProfile Rest Client** y protegidos con **Jettra JWT**:
+- **Cero `StringBuilder`:** La interfaz de clientes (KPI cards, formulario de registro rápido, tabla con estados y acciones) se genera íntegramente combinando widgets (`Card`, `Column`, `Row`, `Header`, `Badge`, `TextInput`, `Button`, `Table`).
+- **Autenticación Desacoplada:** El servicio `CustomerClientService` maneja de forma transparente la inyección del encabezado `Authorization: Bearer <token>`, permitiendo que la vista reactiva permanezca concentrada en la composición visual.
+- **Envoltura con `FluxTemplateView`:** La vista se despacha en la ruta `/flux/customers` dentro del template exclusivo de JettraFlux, garantizando un diseño homogéneo y reactivo sin interferir con las páginas de Jakarta Faces o JettraAura.
+
 ---
 
 ## 8. Relación entre JettraFlux y JettraAura

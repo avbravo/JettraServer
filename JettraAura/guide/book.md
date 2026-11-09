@@ -592,6 +592,45 @@ public class MiPagina extends AuraTemplatePage {
 
 ---
 
+### 8.4 Consumo de Microservicios con Eclipse MicroProfile Rest Client y Jettra JWT (`CustomerAuraPage`)
+
+JettraAura se integra de forma transparente con la especificación **Eclipse MicroProfile Rest Client 3.0** para interactuar con arquitecturas de microservicios autenticadas mediante **Jettra JWT**:
+
+#### 1. Inyección y Uso del Servicio en la Página Aura
+La clase [`CustomerAuraPage.java`](file:///home/avbravo/NetBeansProjects/jettrastack_local/jettraserverexamples/WebExample/src/main/java/io/jettra/server/example/aura/CustomerAuraPage.java) inyecta el servicio `CustomerClientService` (respaldado por un proxy `@RegisterRestClient`):
+
+```java
+@AuraPath("/aura/customers")
+public class CustomerAuraPage extends AuraTemplatePage {
+
+    @Inject
+    private CustomerClientService customerService;
+
+    private final Customer registerCustomer = new Customer("", "", "", "STANDARD", true);
+    private final Customer modalCustomer = new Customer("", "", "", "STANDARD", true);
+    private Customer selectedForDelete;
+
+    private AuraModal registerCustomerModal;
+    private AuraModal editCustomerModal;
+    private AuraModal deleteCustomerModal;
+    ...
+```
+
+#### 2. Diálogos Reactivos `AuraModal` con AJAX Parcial
+Para las operaciones de creación, edición y confirmación de baja, `CustomerAuraPage` utiliza tres componentes `AuraModal` 100% nativos (sin dependencias de jQuery ni librerías externas):
+- **`registerCustomerModal`:** Despliega el formulario para crear un nuevo cliente en `BackEndExample`. Al hacer clic en `btnRegisterSave`, un `AuraAjaxButton` ejecuta la petición remota protegida con JWT y oculta el modal refrescando la tabla vía `AuraAjaxRequestTarget`:
+  ```java
+  registerForm.add(new AuraAjaxButton("btnRegisterSave", target -> {
+      Customer saved = customerService.save(new Customer(registerCustomer.getName(), registerCustomer.getEmail(), registerCustomer.getCompany(), registerCustomer.getTier(), true));
+      registerCustomerModal.hide(target);
+      target.add(feedbackPanel, customerTableContainer);
+  }));
+  ```
+- **`editCustomerModal`:** Precarga los datos del cliente seleccionado en la tabla y los vincula mediante `LambdaModel` al modelo editable, permitiendo guardar modificaciones instantáneamente.
+- **`deleteCustomerModal`:** Diálogo de confirmación para eliminar al cliente del microservicio remoto vía `DELETE /api/v1/customers/{id}` con JWT Bearer.
+
+---
+
 ## Capítulo 9: Tutorial Paso a Paso: Aplicación Completa
 
 A continuación desarrollaremos paso a paso un sistema completo de **Gestión de Tareas de Misión Crítica (TaskFlow)** utilizando JettraAura y JettraServer.

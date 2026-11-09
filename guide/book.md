@@ -315,6 +315,27 @@ JettraAura se integra en `WebExample` como una variante nativa, optimizada y sim
   2. *JettraFlux Reactivo Declarativo* en rutas `/flux/*` con plantilla exclusiva `FluxTemplateView`.
   3. *Suite JettraAura* en rutas `/aura/*` y componentes dinámicos en `.xhtml` con plantilla `AuraTemplatePage`.
 
+### 8.5. Gestión CRUD de Clientes con Eclipse MicroProfile Rest Client y Autenticación Jettra JWT
+`WebExample` implementa comunicación declarativa de microservicios con `BackEndExample` mediante la especificación **Eclipse MicroProfile Rest Client 3.0** y autenticación segura con **Jettra JWT**:
+- **Interfaz Declarativa [`CustomerRestClient`](file:///home/avbravo/NetBeansProjects/jettrastack_local/jettraserverexamples/WebExample/src/main/java/io/jettra/server/example/client/CustomerRestClient.java):**
+  ```java
+  @RegisterRestClient(configKey = "customer-client", baseUri = "http://localhost:8081")
+  @Path("/api/v1/customers")
+  @Produces(MediaType.APPLICATION_JSON)
+  @Consumes(MediaType.APPLICATION_JSON)
+  public interface CustomerRestClient {
+      @GET List<Customer> listCustomers(@HeaderParam("Authorization") String auth);
+      @GET @Path("/{id}") Customer getCustomer(@HeaderParam("Authorization") String auth, @PathParam("id") Long id);
+      @POST Customer createCustomer(@HeaderParam("Authorization") String auth, Customer customer);
+      @DELETE @Path("/{id}") void deleteCustomer(@HeaderParam("Authorization") String auth, @PathParam("id") Long id);
+  }
+  ```
+- **Gestor de Seguridad [`JettraJwtAuthManager`](file:///home/avbravo/NetBeansProjects/jettrastack_local/jettraserverexamples/WebExample/src/main/java/io/jettra/server/example/client/JettraJwtAuthManager.java):** Adquiere tokens Bearer desde `/api/auth/login` o genera tokens locales firmados con algoritmo HMAC-SHA256 (`jettra_backend_super_secret_jwt_key_2026`).
+- **Triple Implementación Frontend para la Entidad `Customer`:**
+  1. **Jakarta Faces (`/clientes.xhtml`):** Vista PrimeFaces con `<p:dataTable>`, filtros, badges de nivel (`ENTERPRISE`, `PREMIUM`, `STANDARD`), y modales HTML/JS para crear, editar y eliminar clientes sin recargar la sesión.
+  2. **JettraFlux (`/flux/customers`):** Construida íntegramente con widgets inmutables de Java 25 puro **sin utilizar `StringBuilder`**, con tarjetas KPI en vivo y formulario de alta rápida.
+  3. **JettraAura (`/aura/customers`):** Diseñada en `CustomerAuraPage.html` y `CustomerAuraPage.java` con tres diálogos `AuraModal` (`registerCustomerModal`, `editCustomerModal`, `deleteCustomerModal`) conectados a botones `AuraAjaxButton` con refresco parcial de la tabla.
+
 ---
 
 ## 9. Framework de Pruebas JettraTest
