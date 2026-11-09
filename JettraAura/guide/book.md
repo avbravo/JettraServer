@@ -451,18 +451,104 @@ public class InventarioPage extends AuraWebPage {
 }
 ```
 
-### 8.2 Despliegue en Servidores Servlet (`AuraServlet`)
-Para despliegues convencionales en contenedores Jakarta EE compatibles con Servlet 6.1:
-```xml
-<servlet>
-    <servlet-name>AuraServlet</servlet-name>
-    <servlet-class>io.jettra.aura.server.AuraServlet</servlet-class>
-    <load-on-startup>1</load-on-startup>
-</servlet>
-<servlet-mapping>
-    <servlet-name>AuraServlet</servlet-name>
-    <url-pattern>/*</url-pattern>
-</servlet-mapping>
+### 8.2 Arquitectura 100% Zero-XML: Despliegue Programático sin `web.xml`
+A diferencia de los frameworks web del pasado, **JettraAura es 100% Zero-XML y no necesita el archivo `web.xml`** para ninguna configuración. La plataforma adopta un enfoque moderno *Code-First* alineado con Java 25 y Jakarta EE 11:
+
+1. **Acople Directo a JettraServer (Loom Virtual Threads):**
+   El framework se conecta directamente al router de ultra bajo consumo de memoria de JettraServer sin intermediarios ni descriptores XML:
+   ```java
+   AuraModule aura = AuraModule.attach(server);
+   aura.getApplication().setCdiContainer(jakarta.getCdiContainer());
+   aura.page("/inicio", InicioPage.class);
+   aura.homePage(InicioPage.class);
+   ```
+
+2. **Registro Programático en Contenedores Jakarta EE (Servlet 6.1):**
+   Si se requiere convivir con una arquitectura basada en Servlets dentro de JettraServer, el registro se realiza exclusivamente por código Java a través del puente de servlets o `@WebServlet`:
+   ```java
+   // Registro programático - Cero archivos XML
+   jakarta.getServletBridge().registerServlet("/aura/*", new AuraServlet());
+   ```
+
+3. **Configuración Declarativa con Eclipse MicroProfile Config:**
+   Los parámetros operacionales (puerto, modo de persistencia `storage.mode`, rutas estáticas, timeout de sesiones) se gestionan unificadamente mediante `microprofile-config.properties` o variables de entorno del sistema (`@Inject @ConfigProperty`).
+
+---
+
+### 8.3 Herencia de Plantillas Maestras (`<aura:extend>` y `<aura:child/>`)
+JettraAura implementa el patrón de **Herencia Visual de Plantillas** (inspirado en `<wicket:extend>` / `<wicket:child>`), permitiendo que múltiples páginas compartan una misma maqueta global (Topbar, Menú Lateral Hamburguesa, Cambiador de Tema Claro/Oscuro, Badges de Persistencia y Footer) sin duplicar código HTML:
+
+#### 1. Plantilla Maestra Base (`AuraTemplatePage.html`)
+Define la estructura exterior compartida y el marcador `<aura:child/>` donde se incrustará el contenido de las páginas derivadas:
+```html
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <title>JettraAura Enterprise</title>
+</head>
+<body>
+    <header class="layout-top">
+        <button type="button" class="hamburger-btn" onclick="toggleSidebar()">☰</button>
+        <span>JettraAura Enterprise</span>
+        <button type="button" onclick="toggleTheme()">🌙/☀️ Tema</button>
+        <span aura:id="topStorageMode" class="badge">JVM_RAM</span>
+    </header>
+
+    <div class="layout-wrapper">
+        <aside class="layout-left">
+            <!-- Menú de navegación global -->
+            <a href="/aura/demo">📊 Portal</a>
+            <a href="/aura/catalogo">📦 Catálogo</a>
+            <a href="/aura/formulario">📝 Formulario</a>
+            <a href="/aura/contador">⚡ Contador</a>
+        </aside>
+
+        <!-- Punto de inserción de las páginas derivadas -->
+        <main class="layout-center">
+            <aura:child/>
+        </main>
+    </div>
+
+    <footer class="layout-footer">
+        <span aura:id="footerStorageMode">Modo Persistencia: [JVM_RAM]</span>
+    </footer>
+</body>
+</html>
+```
+
+#### 2. Clase Maestra Base (`AuraTemplatePage.java`)
+Hereda de `AuraWebPage` e inicializa los componentes compartidos por todas las pantallas:
+```java
+public abstract class AuraTemplatePage extends AuraWebPage {
+    public AuraTemplatePage() {
+        add(new AuraLabel("topStorageMode", () -> getEffectiveStorageMode()));
+        add(new AuraLabel("footerStorageMode", () -> "Modo Persistencia: [" + getEffectiveStorageMode() + "]"));
+    }
+}
+```
+
+#### 3. Plantilla Derivada con `<aura:extend>` (`MiPagina.html`)
+Solo necesita declarar el bloque de contenido específico que reemplazará a `<aura:child/>`:
+```html
+<aura:extend>
+    <div class="ui-card">
+        <h2 aura:id="titulo">Contenido Específico de la Pantalla</h2>
+        <p aura:id="descripcion">Este fragmento se incrusta en el centro de la plantilla maestra.</p>
+    </div>
+</aura:extend>
+```
+
+#### 4. Clase Derivada (`MiPagina.java`)
+```java
+@AuraPath("/mi-pagina")
+public class MiPagina extends AuraTemplatePage {
+    public MiPagina() {
+        setPageTitle("Mi Pantalla Específica");
+        add(new AuraLabel("titulo", "Gestión de Misión Crítica"));
+        add(new AuraLabel("descripcion", "Renderizado con marcado puro e inyección CDI."));
+    }
+}
 ```
 
 ---

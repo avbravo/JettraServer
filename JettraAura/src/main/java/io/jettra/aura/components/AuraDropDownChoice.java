@@ -18,6 +18,11 @@ public class AuraDropDownChoice<T> extends AuraFormComponent<T> {
         super(id);
     }
 
+    public AuraDropDownChoice(String id, List<T> choices) {
+        super(id);
+        this.choices = choices != null ? choices : Collections.emptyList();
+    }
+
     public AuraDropDownChoice(String id, IModel<T> model, List<T> choices) {
         super(id, model);
         this.choices = choices != null ? choices : Collections.emptyList();

@@ -54,6 +54,10 @@ public class AuraResponse implements Serializable {
         setHeader("Location", location);
     }
 
+    public void redirect(String location) {
+        sendRedirect(location);
+    }
+
     public boolean isRedirect() {
         return redirectLocation != null;
     }

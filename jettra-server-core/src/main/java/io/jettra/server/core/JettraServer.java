@@ -38,6 +38,12 @@ public class JettraServer {
     private JettraStorageEngine<String, Object> storageEngine;
     private long startupTimeMillis;
 
+    private static volatile JettraServer INSTANCE;
+
+    public static JettraServer getInstance() {
+        return INSTANCE;
+    }
+
     public JettraServer() {
         this(new ServerConfig());
     }
@@ -60,6 +66,7 @@ public class JettraServer {
 
         // Registrar rutas de monitoreo y seguridad por defecto
         setupDefaultEndpoints();
+        INSTANCE = this;
     }
 
     public static JettraServer create() {

@@ -97,6 +97,23 @@ public class AuraPage extends AuraContainer {
         this.response = response;
     }
 
+    public void setResponsePage(Class<? extends AuraPage> pageClass) {
+        if (pageClass != null) {
+            String path = io.jettra.aura.server.AuraApplication.get() != null
+                ? io.jettra.aura.server.AuraApplication.get().getPathForPage(pageClass)
+                : null;
+            if (path != null && response != null) {
+                response.redirect(path);
+            }
+        }
+    }
+
+    public void setResponsePage(AuraPage page) {
+        if (page != null) {
+            setResponsePage(page.getClass());
+        }
+    }
+
     public AuraSession getSession() {
         if (session == null) {
             session = AuraSession.get();

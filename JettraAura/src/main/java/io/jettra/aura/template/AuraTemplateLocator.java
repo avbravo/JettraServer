@@ -17,45 +17,95 @@ public class AuraTemplateLocator {
 
     private static final Map<Class<?>, String> TEMPLATE_CACHE = new ConcurrentHashMap<>();
 
+    private static final java.util.regex.Pattern EXTEND_PATTERN = java.util.regex.Pattern.compile(
+        "<(?:aura|wicket|j):extend>(.*?)</(?:aura|wicket|j):extend>",
+        java.util.regex.Pattern.DOTALL | java.util.regex.Pattern.CASE_INSENSITIVE
+    );
+
+    private static final java.util.regex.Pattern CHILD_PATTERN = java.util.regex.Pattern.compile(
+        "<(?:aura|wicket|j):child\\s*(?:/>|>\\s*</(?:aura|wicket|j):child>)",
+        java.util.regex.Pattern.DOTALL | java.util.regex.Pattern.CASE_INSENSITIVE
+    );
+
+    private static final java.util.regex.Pattern TITLE_PATTERN = java.util.regex.Pattern.compile(
+        "<title>(.*?)</title>",
+        java.util.regex.Pattern.DOTALL | java.util.regex.Pattern.CASE_INSENSITIVE
+    );
+
     public static String loadTemplate(Class<?> componentClass) {
         if (componentClass == null) return null;
 
         return TEMPLATE_CACHE.computeIfAbsent(componentClass, clazz -> {
-            // 1. Verificar anotación @AuraTemplate explícita
-            AuraTemplate annotation = clazz.getAnnotation(AuraTemplate.class);
-            if (annotation != null && !annotation.value().isBlank()) {
-                String path = annotation.value().trim();
-                String content = readFromClasspathOrFile(path, clazz);
-                if (content != null) return content;
+            String raw = doFindTemplate(clazz);
+            if (raw != null) {
+                return processTemplateInheritance(raw, clazz);
             }
-
-            // 2. Convención 1:1 - Mismo nombre junto a la clase Java en el classpath
-            String simpleName = clazz.getSimpleName();
-            String packagePath = clazz.getPackageName().replace('.', '/');
-
-            String[] candidates = {
-                packagePath + "/" + simpleName + ".html",
-                packagePath + "/" + Character.toLowerCase(simpleName.charAt(0)) + simpleName.substring(1) + ".html",
-                "templates/" + simpleName + ".html",
-                "templates/" + simpleName.toLowerCase() + ".html",
-                "webapp/" + simpleName + ".html",
-                "webapp/" + simpleName.toLowerCase() + ".html",
-                "pages/" + simpleName + ".html",
-                "pages/" + simpleName.toLowerCase() + ".html",
-                simpleName + ".html",
-                simpleName.toLowerCase() + ".html"
-            };
-
-            for (String candidate : candidates) {
-                String content = readFromClasspathOrFile(candidate, clazz);
-                if (content != null) {
-                    return content;
-                }
-            }
-
-            // Fallback: plantilla mínima por defecto para desarrollo
             return createDefaultTemplate(clazz);
         });
+    }
+
+    private static String doFindTemplate(Class<?> clazz) {
+        // 1. Verificar anotación @AuraTemplate explícita
+        AuraTemplate annotation = clazz.getAnnotation(AuraTemplate.class);
+        if (annotation != null && !annotation.value().isBlank()) {
+            String path = annotation.value().trim();
+            String content = readFromClasspathOrFile(path, clazz);
+            if (content != null) return content;
+        }
+
+        // 2. Convención 1:1 - Mismo nombre junto a la clase Java en el classpath
+        String simpleName = clazz.getSimpleName();
+        String packagePath = clazz.getPackageName().replace('.', '/');
+
+        String[] candidates = {
+            packagePath + "/" + simpleName + ".html",
+            packagePath + "/" + Character.toLowerCase(simpleName.charAt(0)) + simpleName.substring(1) + ".html",
+            "templates/" + simpleName + ".html",
+            "templates/" + simpleName.toLowerCase() + ".html",
+            "webapp/" + simpleName + ".html",
+            "webapp/" + simpleName.toLowerCase() + ".html",
+            "pages/" + simpleName + ".html",
+            "pages/" + simpleName.toLowerCase() + ".html",
+            simpleName + ".html",
+            simpleName.toLowerCase() + ".html"
+        };
+
+        for (String candidate : candidates) {
+            String content = readFromClasspathOrFile(candidate, clazz);
+            if (content != null) {
+                return content;
+            }
+        }
+
+        return null;
+    }
+
+    private static String processTemplateInheritance(String template, Class<?> clazz) {
+        if (template == null || clazz == null) return template;
+
+        java.util.regex.Matcher extendMatcher = EXTEND_PATTERN.matcher(template);
+        if (extendMatcher.find()) {
+            String childBody = extendMatcher.group(1);
+            Class<?> superClass = clazz.getSuperclass();
+
+            if (superClass != null && superClass != Object.class && superClass != io.jettra.aura.core.AuraPage.class && superClass != io.jettra.aura.core.AuraWebPage.class) {
+                String parentTemplate = loadTemplate(superClass);
+                if (parentTemplate != null && !parentTemplate.isBlank()) {
+                    java.util.regex.Matcher childMatcher = CHILD_PATTERN.matcher(parentTemplate);
+                    if (childMatcher.find()) {
+                        String combined = childMatcher.replaceFirst(java.util.regex.Matcher.quoteReplacement(childBody));
+                        java.util.regex.Matcher titleMatcher = TITLE_PATTERN.matcher(template);
+                        if (titleMatcher.find()) {
+                            String childTitle = titleMatcher.group(1);
+                            combined = combined.replaceFirst("<title>.*?</title>", "<title>" + java.util.regex.Matcher.quoteReplacement(childTitle) + "</title>");
+                        }
+                        return combined;
+                    }
+                }
+            }
+        }
+
+        return template;
     }
 
     public static void clearCache() {

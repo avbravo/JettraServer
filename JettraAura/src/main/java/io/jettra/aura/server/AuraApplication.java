@@ -128,6 +128,20 @@ public class AuraApplication implements Serializable {
         return this;
     }
 
+    public CdiContainer getCdiContainer() {
+        return cdiContainer;
+    }
+
+    public String getPathForPage(Class<? extends AuraPage> pageClass) {
+        if (pageClass == null) return null;
+        for (Map.Entry<String, Class<? extends AuraPage>> entry : pageRoutes.entrySet()) {
+            if (pageClass.equals(entry.getValue())) {
+                return entry.getKey();
+            }
+        }
+        return null;
+    }
+
     public AuraApplication setCdiContainer(CdiContainer cdiContainer) {
         this.cdiContainer = cdiContainer;
         return this;

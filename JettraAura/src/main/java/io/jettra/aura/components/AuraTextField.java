@@ -16,6 +16,11 @@ public class AuraTextField<T> extends AuraFormComponent<T> {
         super(id);
     }
 
+    public AuraTextField(String id, Class<T> type) {
+        super(id);
+        this.type = type;
+    }
+
     public AuraTextField(String id, IModel<T> model) {
         super(id, model);
     }
