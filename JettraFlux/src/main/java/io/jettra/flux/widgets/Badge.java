@@ -142,7 +142,7 @@ public class Badge extends Widget {
                 + "; color: " + color + "; border: " + border + "; gap: 0.35rem; letter-spacing: 0.3px; white-space: nowrap;";
 
         StringBuilder sb = new StringBuilder();
-        sb.append("<span ").append(renderCommonAttributes(theme, "espresso-badge")).append(" style=\"").append(style).append("\">");
+        sb.append("<span ").append(renderCommonAttributes(theme, "espresso-badge", style)).append(">");
         if (icon != null && !icon.isEmpty()) {
             sb.append("<i class=\"").append(icon).append("\"></i>");
         }

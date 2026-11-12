@@ -102,24 +102,30 @@ public abstract class Widget implements JettraComponent {
 
     protected String renderCommonAttributes(ThemeData theme, String defaultClasses, String defaultStyles) {
         StringBuilder sb = new StringBuilder();
-        sb.append("id=\"").append(id).append("\" ");
+        String effectiveId = (modifier != null && modifier.getAttributes().containsKey("id"))
+                ? modifier.getAttributes().get("id")
+                : id;
+        sb.append("id=\"").append(effectiveId).append("\" ");
         
-        String finalClasses = defaultClasses + " " + modifier.getClasses();
+        String finalClasses = defaultClasses + (modifier != null ? (" " + modifier.getClasses()) : "");
         if (!finalClasses.trim().isEmpty()) {
             sb.append("class=\"").append(finalClasses.trim()).append("\" ");
         }
 
-        String combinedStyles = ((defaultStyles != null ? defaultStyles : "") + " " + modifier.getStyles()).trim();
+        String combinedStyles = ((defaultStyles != null ? defaultStyles : "") + (modifier != null ? (" " + modifier.getStyles()) : "")).trim();
         if (!combinedStyles.isEmpty()) {
             sb.append("style=\"").append(combinedStyles).append("\" ");
         }
 
         if (onClick != null) {
-            sb.append("onclick=\"espressoFire('").append(id).append("')\" ");
+            sb.append("onclick=\"espressoFire('").append(effectiveId).append("')\" ");
         }
         
-        for (java.util.Map.Entry<String, String> entry : modifier.getAttributes().entrySet()) {
-            sb.append(entry.getKey()).append("=\"").append(entry.getValue()).append("\" ");
+        if (modifier != null) {
+            for (java.util.Map.Entry<String, String> entry : modifier.getAttributes().entrySet()) {
+                if ("id".equalsIgnoreCase(entry.getKey())) continue;
+                sb.append(entry.getKey()).append("=\"").append(entry.getValue()).append("\" ");
+            }
         }
 
         return sb.toString();
