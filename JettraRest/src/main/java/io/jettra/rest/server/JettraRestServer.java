@@ -5,6 +5,8 @@ import io.jettra.rest.annotations.QueryParam;
 import io.jettra.rest.annotations.GET;
 import io.jettra.rest.annotations.PathParam;
 import io.jettra.rest.annotations.DELETE;
+import io.jettra.rest.annotations.DenyAll;
+import io.jettra.rest.annotations.PATCH;
 import io.jettra.rest.annotations.PUT;
 import io.jettra.rest.annotations.Secured;
 import io.jettra.rest.annotations.Path;
@@ -63,8 +65,9 @@ public class JettraRestServer {
         boolean secured;
         List<String> rolesAllowed;
         boolean permitAll;
+        boolean denyAll;
 
-        public RestRoute(String httpMethod, Pattern pathPattern, List<String> pathParamNames, Method method, Object resourceInstance, boolean secured, List<String> rolesAllowed, boolean permitAll) {
+        public RestRoute(String httpMethod, Pattern pathPattern, List<String> pathParamNames, Method method, Object resourceInstance, boolean secured, List<String> rolesAllowed, boolean permitAll, boolean denyAll) {
             this.httpMethod = httpMethod;
             this.pathPattern = pathPattern;
             this.pathParamNames = pathParamNames;
@@ -73,6 +76,7 @@ public class JettraRestServer {
             this.secured = secured;
             this.rolesAllowed = rolesAllowed;
             this.permitAll = permitAll;
+            this.denyAll = denyAll;
         }
     }
 
@@ -122,6 +126,7 @@ public class JettraRestServer {
         List<RestRoute> routes = new ArrayList<>();
 
         boolean classSecured = clazz.isAnnotationPresent(Secured.class);
+        boolean classDenyAll = clazz.isAnnotationPresent(DenyAll.class);
         List<String> classRoles = clazz.isAnnotationPresent(RolesAllowed.class) ?
                 Arrays.asList(clazz.getAnnotation(RolesAllowed.class).value()) : List.of();
         
@@ -134,6 +139,7 @@ public class JettraRestServer {
             else if (method.isAnnotationPresent(POST.class)) httpMethod = "POST";
             else if (method.isAnnotationPresent(PUT.class)) httpMethod = "PUT";
             else if (method.isAnnotationPresent(DELETE.class)) httpMethod = "DELETE";
+            else if (method.isAnnotationPresent(PATCH.class)) httpMethod = "PATCH";
 
             if (httpMethod == null) continue;
 
@@ -159,12 +165,13 @@ public class JettraRestServer {
             regex.append(Pattern.quote(resolvedMethodPath.substring(lastEnd)));
             Pattern pattern = Pattern.compile(regex.toString() + "/?");
 
-            boolean methodSecured = classSecured || method.isAnnotationPresent(Secured.class);
+            boolean methodSecured = classSecured || method.isAnnotationPresent(Secured.class) || method.isAnnotationPresent(RolesAllowed.class);
             List<String> methodRoles = method.isAnnotationPresent(RolesAllowed.class) ?
                     Arrays.asList(method.getAnnotation(RolesAllowed.class).value()) : classRoles;
             boolean permitAll = method.isAnnotationPresent(PermitAll.class);
+            boolean denyAll = (classDenyAll && !permitAll) || method.isAnnotationPresent(DenyAll.class);
 
-            routes.add(new RestRoute(httpMethod, pattern, paramNames, method, resource, methodSecured, methodRoles, permitAll));
+            routes.add(new RestRoute(httpMethod, pattern, paramNames, method, resource, methodSecured, methodRoles, permitAll, denyAll));
         }
 
         // Register HttpHandler under base path in JettraServer
@@ -196,6 +203,10 @@ public class JettraRestServer {
                     }
 
                     // Security check
+                    if (matchedRoute.denyAll) {
+                        sendError(exchange, 403, "Access denied by @DenyAll");
+                        return;
+                    }
                     SecurityContext securityContext = null;
                     if (matchedRoute.secured && !matchedRoute.permitAll) {
                         String authHeader = exchange.getRequestHeaders().getFirst(authHeaderName);
@@ -359,7 +370,10 @@ public class JettraRestServer {
         if (type == String.class) return val;
         if (type == Integer.class || type == int.class) return Integer.parseInt(val);
         if (type == Long.class || type == long.class) return Long.parseLong(val);
+        if (type == Double.class || type == double.class) return Double.parseDouble(val);
+        if (type == Float.class || type == float.class) return Float.parseFloat(val);
         if (type == Boolean.class || type == boolean.class) return Boolean.parseBoolean(val);
+        if (type == UUID.class) return UUID.fromString(val);
         return val;
     }
 
